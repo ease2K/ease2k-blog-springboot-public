@@ -1,4 +1,4 @@
-# ease2k 博客 · Spring Boot 公开学习版
+# ease2k 博客 · Spring Boot 版
 
 用 JDK 27、Spring Boot 4.1.2、React 和 SQLite 实现的个人博客。仓库提供三篇可本地运行的示例，用来练习文章查询、Markdown 渲染、站内搜索、RSS 和站主工作台。
 
@@ -44,6 +44,6 @@ BLOG_EDITOR_DIRECTORY="$PWD/editor" ./run-local.sh
 
 ## 对照 Node.js 版
 
-两个公开仓库可以对照学习同一博客的后端实现。 [Node.js 学习版](https://github.com/ease2K/ease2k-blog-public)
+同一博客也有 Node.js 后端。 [Node.js 版](https://github.com/ease2K/ease2k-blog-public)
 
 作者保留原创代码和设计的相关权利。第三方依赖与品牌素材适用各自的许可证和使用说明。
