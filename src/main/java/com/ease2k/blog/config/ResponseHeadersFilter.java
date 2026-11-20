@@ -1,0 +1,27 @@
+package com.ease2k.blog.config;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+@Component
+public class ResponseHeadersFilter extends OncePerRequestFilter {
+
+    private static final String CONTENT_POLICY = "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+            + "style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; "
+            + "connect-src 'self'; frame-src 'self' about:; frame-ancestors 'none'; object-src 'none'; base-uri 'none'";
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
+        response.setHeader("X-Content-Type-Options", "nosniff");
+        response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+        response.setHeader("Content-Security-Policy", CONTENT_POLICY);
+        chain.doFilter(request, response);
+    }
+}

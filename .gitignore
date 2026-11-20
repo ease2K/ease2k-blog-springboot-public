@@ -1,0 +1,15 @@
+/target/
+/frontend/node_modules/
+/frontend/dist/
+/.idea/
+*.iml
+.DS_Store
+/editor/
+/data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+**/owner.json
+.env
+.env.*
+!.env.example

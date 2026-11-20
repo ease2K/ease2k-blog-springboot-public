@@ -1,0 +1,16 @@
+{
+    "codeforces": {
+        "rating": null,
+        "maxRating": null,
+        "history": [],
+        "stale": true,
+        "fetchedAt": null
+    },
+    "atcoder": {
+        "rating": null,
+        "maxRating": null,
+        "history": [],
+        "stale": true,
+        "fetchedAt": null
+    }
+}

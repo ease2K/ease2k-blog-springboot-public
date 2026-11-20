@@ -1,0 +1,5 @@
+[Service]
+ExecStart=
+ExecStart=/usr/bin/node /opt/ease2k-blog/current/backup-cli.mjs create /var/lib/ease2k-blog-springboot/editor /var/backups/ease2k-blog
+ReadOnlyPaths=
+ReadOnlyPaths=/var/lib/ease2k-blog-springboot/editor

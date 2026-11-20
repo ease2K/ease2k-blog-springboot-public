@@ -1,0 +1,2 @@
+# 未启用站主工作台时，仍需覆盖客户端传入的同名头。
+proxy_set_header X-Ease2k-Owner-Proxy "";
