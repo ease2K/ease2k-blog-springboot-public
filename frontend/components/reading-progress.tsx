@@ -1,9 +1,9 @@
 import { BookOpen, ChevronRight } from "lucide-react";
-import type { Entry } from "@/lib/content";
+import type { EntrySummary } from "@/lib/content";
 import type { ReadingData } from "@/lib/reading";
 
-type Group = { id: string; title: string; enTitle?: string; chapters: Entry[] };
-export function RecentReading({ entries, groups, records, lang, open, available }: { entries: Entry[]; groups: Group[]; records: ReadingData; lang: "zh" | "en"; open: (path: string) => void; available: boolean }) {
+type Group = { id: string; title: string; enTitle?: string; chapters: EntrySummary[] };
+export function RecentReading({ entries, groups, records, lang, open, available }: { entries: EntrySummary[]; groups: Group[]; records: ReadingData; lang: "zh" | "en"; open: (path: string) => void; available: boolean }) {
     const last = entries.filter(entry => records[entry.id]?.seriesId === (entry.series?.id || "") && (!records[entry.id].completed || !!entry.series)).sort((a, b) => records[b.id].visitedAt - records[a.id].visitedAt)[0];
     if (!last) return null;
     const group = groups.find(group => group.id === last.series?.id);
@@ -22,7 +22,7 @@ export function ContinueReading({ group, records, lang, open, available, compact
     const visited = group.chapters.filter(entry => records[entry.id]?.seriesId === group.id).sort((a, b) => records[b.id].visitedAt - records[a.id].visitedAt);
     const last = visited[0];
     const completed = group.chapters.filter(entry => records[entry.id]?.completed && records[entry.id].seriesId === group.id).length;
-    const completedChapter = (entry: Entry) => records[entry.id]?.seriesId === group.id && records[entry.id]?.completed;
+    const completedChapter = (entry: EntrySummary) => records[entry.id]?.seriesId === group.id && records[entry.id]?.completed;
     const target = last && !completedChapter(last) ? last : group.chapters.find(entry => !completedChapter(entry)) || last || group.chapters[0];
     if (!target) return null;
     const href = "/entry/" + target.id + ((records[target.id]?.heading || records[target.id]?.position) && !completedChapter(target) ? "?resume=1" : "");

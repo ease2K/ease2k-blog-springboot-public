@@ -73,7 +73,7 @@ public class ArticleServiceImpl implements ArticleService {
                 article.body(), article.enBody(), String.join(" ", article.tags())};
         for (int i = 0; i < fields.length; i++) {
             String text = fields[i];
-            if (text == null || !text.toLowerCase(Locale.ROOT).contains(keyword)) {
+            if (!text.toLowerCase(Locale.ROOT).contains(keyword)) {
                 continue;
             }
             // 摘录和语言提示取决于当前查询，只写入副本，避免串到列表或其他搜索。
@@ -106,11 +106,11 @@ public class ArticleServiceImpl implements ArticleService {
     private static ObjectNode indexEntry(ObjectMapper mapper, Article article) {
         ObjectNode result = mapper.valueToTree(article);
         result.remove(List.of("body", "enBody", "playground"));
-        // 仓库已过滤空正文。前端用这两个标记判断正文和英文版是否可用。
+        // 公开快照只包含有正文的文章，索引只返回正文可用标记。
         result.put("hasBody", true);
-        result.put("hasEnglishBody", article.enBody() != null && !article.enBody().isBlank());
+        result.put("hasEnglishBody", !article.enBody().isBlank());
         String summary = article.summary();
-        if (summary == null || summary.isBlank() || "-".equals(summary.strip()) || "—".equals(summary.strip())) {
+        if (summary.isBlank() || "-".equals(summary.strip()) || "—".equals(summary.strip())) {
             result.put("summary", snippet(article.body(), ""));
         }
         return result;

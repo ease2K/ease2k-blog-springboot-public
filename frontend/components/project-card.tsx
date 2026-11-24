@@ -1,7 +1,7 @@
 import { ArrowUpRight, Folder, Code2 } from "lucide-react";
-import type { Entry } from "@/lib/content";
+import type { EntrySummary } from "@/lib/content";
 
-export default function ProjectCard({ entry, lang, open, detail = false }: { entry: Entry; lang: "zh" | "en"; open?: (path: string) => void; detail?: boolean }) {
+export default function ProjectCard({ entry, lang, open, detail = false }: { entry: EntrySummary; lang: "zh" | "en"; open?: (path: string) => void; detail?: boolean }) {
     const t = (zh: string, en: string) => lang === "zh" ? zh : en;
     const project = entry.project;
     const statuses = { active: t("持续开发", "In development"), complete: t("已完成", "Completed"), paused: t("已暂停", "Paused") };

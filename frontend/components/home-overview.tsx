@@ -1,9 +1,9 @@
 import { ArrowUpRight, BookOpen, Clock3, Folder, Pin, Sprout } from "lucide-react";
 import type { ReactNode } from "react";
-import { inSection, type Entry } from "@/lib/content";
+import { inSection, type EntrySummary } from "@/lib/content";
 import ProjectCard from "@/components/project-card";
 
-export default function HomeOverview({ entries, lang, row, open, continueReading }: { entries: Entry[]; lang: "zh" | "en"; row: (entry: Entry) => ReactNode; open: (path: string) => void; continueReading: ReactNode }) {
+export default function HomeOverview({ entries, lang, row, open, continueReading }: { entries: EntrySummary[]; lang: "zh" | "en"; row: (entry: EntrySummary) => ReactNode; open: (path: string) => void; continueReading: ReactNode }) {
     const t = (zh: string, en: string) => lang === "zh" ? zh : en;
     const featured = entries.filter(entry => entry.featured && entry.kind !== "project").slice(0, 3);
     const recent = entries.filter(entry => entry.kind !== "project" && !featured.some(value => value.id === entry.id)).sort((a, b) => Date.parse(b.modifiedAt || b.date) - Date.parse(a.modifiedAt || a.date)).slice(0, 4);

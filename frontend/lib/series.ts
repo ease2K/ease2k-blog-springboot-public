@@ -1,9 +1,9 @@
-import type { Entry } from "./content";
+import type { EntrySummary } from "./content";
 export type SeriesInfo = { id: string; title: string; enTitle?: string; description?: string; enDescription?: string; order: number; cover?: string };
-export function seriesCatalog(entries: Entry[], includePrivate = false) {
-    const groups = new Map<string, Entry[]>();
+export function seriesCatalog(entries: EntrySummary[]) {
+    const groups = new Map<string, EntrySummary[]>();
     for (const entry of entries) {
-        if (!entry.series || (!includePrivate && (entry.visibility === "private" || entry.sample || !(entry.hasBody || entry.body?.trim())))) continue;
+        if (!entry.series) continue;
         const group = groups.get(entry.series.id) || [];
         group.push(entry); groups.set(entry.series.id, group);
     }

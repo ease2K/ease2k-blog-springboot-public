@@ -40,6 +40,8 @@ export type Entry = {
     };
 };
 
+export type EntrySummary = Omit<Entry, "body" | "enBody" | "playground">;
+
 export const profiles = {
     codeforces: "https://codeforces.com/",
     atcoder: "https://atcoder.jp/",
@@ -77,7 +79,7 @@ export const orderedAwards = [...awards].sort((a, b) => Number(!!b.pinned) - Num
 export const technologyTopics = ["Java", "MySQL", "HTML", "CSS", "JavaScript"] as const;
 export const sections = ["daily", "articles", "projects", "algorithms", "java", "mysql", "html", "css", "javascript"] as const;
 export type Section = typeof sections[number];
-export function inSection(entry: Entry, section: string) {
+export function inSection(entry: EntrySummary, section: string) {
     if (section === "daily") return entry.kind === "daily";
     if (section === "projects") return entry.kind === "project";
     if (section === "articles") return true;
