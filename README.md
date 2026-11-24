@@ -2,7 +2,7 @@
 
 这是 ease2k 博客的 Spring Boot 公开版，包含公开阅读站点和站主工作台。后端使用 Java 27、Spring Boot 4.1.2 和 Spring MVC，前端沿用原博客的 React、TypeScript 和样式，由 Vite 构建。Spring Boot 在同一个端口提供 HTML、前端资源、JSON API 和 RSS。
 
-仓库自带三篇可直接运行的示例，覆盖 HTTP 请求、SQLite 草稿和博客项目。公开站点支持文章、专栏、中英文阅读、全文搜索和 RSS。配置站主数据目录后，可以登录工作台编辑 Markdown、保存草稿、发布、查看历史版本、管理专栏与图片。站主数据通过 Spring JDBC 写入 SQLite，兼容原 Node.js 版的数据目录格式。
+仓库自带三篇可直接运行的示例，覆盖 HTTP 请求、SQLite 草稿和博客项目。公开站点支持文章、专栏、中英文阅读、全文搜索和 RSS。配置站主数据目录后，可以登录工作台编辑 Markdown、保存草稿、发布、查看历史版本、管理专栏与图片。站主数据通过 MyBatis 读写 SQLite，兼容原 Node.js 版的数据目录格式。
 
 ## 本地启动
 
@@ -49,10 +49,10 @@ ArticleController.entry()
 ```
 
 1. [ArticleController](src/main/java/com/ease2k/blog/controller/ArticleController.java) 用 `@GetMapping` 匹配 HTTP 路径，`@PathVariable` 取出 ID。找到时返回包含 `entry` 的 JSON，ID 不存在或文章未公开时返回 404。
-2. [ArticleService](src/main/java/com/ease2k/blog/service/ArticleService.java) 是 Spring 管理的 `@Service`。Spring 通过构造器把它注入 Controller，并把带 `@Repository` 的 `ArticleRepository` 注入 Service。详情查询在这里委托给数据层，列表摘要与全文搜索也由这个类处理。
+2. Spring 通过构造器把 [ArticleServiceImpl](src/main/java/com/ease2k/blog/service/ArticleServiceImpl.java) 作为 `ArticleService` 注入 Controller。它把详情查询委托给 `ArticleRepository`，并负责列表摘要和全文搜索。
 3. [ArticleRepository](src/main/java/com/ease2k/blog/repository/ArticleRepository.java) 维护不可变的公开文章列表、ID 索引和图片引用集合。[SeedArticles](src/main/java/com/ease2k/blog/repository/SeedArticles.java) 启动时加载基础文章。工作台启用后，仓库从 `OwnerEntries.published()` 获取合并后的公开数据。涉及公开内容的事务提交后会更新版本号，下一次读取按新版本重建快照。
 4. 列表和搜索共用按快照版本生成的文章摘要。列表省去中英文正文和代码练习配置，详情才返回这些字段。搜索检查标题、摘要、正文和标签，最多返回 30 条匹配及其摘录。
-5. 直接打开 `/entry/{id}` 会进入 [PageController](src/main/java/com/ease2k/blog/controller/PageController.java)。[PageRenderer](src/main/java/com/ease2k/blog/service/PageRenderer.java) 用 CommonMark 渲染初始正文，生成 canonical、Open Graph 和初始 JSON。浏览器加载 [公开站点入口](frontend/client.tsx) 后，由 React 提供公式、代码高亮和交互。
+5. 直接打开 `/entry/{id}` 会进入 [PageController](src/main/java/com/ease2k/blog/controller/PageController.java)。[HtmlPageRenderer](src/main/java/com/ease2k/blog/service/HtmlPageRenderer.java) 用 CommonMark 渲染初始正文，生成 canonical、Open Graph 和初始 JSON。浏览器加载 [公开站点入口](frontend/client.tsx) 后，由 React 提供公式、代码高亮和交互。
 
 ### 从 Controller 到数据层
 
@@ -66,11 +66,24 @@ ArticleController.entry()
 | `OwnerSeries`、`OwnerMedia` | 管理专栏、图片文件和图片引用 |
 | `OwnerAccessFilter`、`OwnerSessions` | 校验工作台访问来源、会话与写请求令牌 |
 
-阅读代码时，可以从 Controller 的构造器找到注入的依赖，再在详情接口、Service 和 Repository 分别设置断点。工作台的 SQL 事务集中在 [OwnerDatabase](src/main/java/com/ease2k/blog/owner/OwnerDatabase.java)，通过 `JdbcTemplate` 和 `TransactionTemplate` 读写 SQLite。
+阅读代码时，可以从 Controller 的构造器找到注入的依赖，再在详情接口、Service 和 Repository 分别设置断点。工作台的 SQL 定义在 MyBatis Mapper 接口中，例如 [OwnerEntryMapper](src/main/java/com/ease2k/blog/owner/OwnerEntryMapper.java)。[OwnerDatabase](src/main/java/com/ease2k/blog/owner/OwnerDatabase.java) 负责初始化 SQLite，并通过 `SqlSessionTemplate` 让 Mapper 参与现有的 Spring 事务。
 
-### 接口编程练习
+### 接口与实现
 
-想练习接口与构造器注入，可以先把 `ArticleService` 对 Controller 提供的查询方法抽成接口，将公开版的现有查询逻辑移到实现类，再让 Controller 通过构造器依赖接口。下一步可对 `ArticleRepository` 做同样的拆分，让业务实现通过接口读取公开快照。改动前后分别请求详情、列表和搜索接口，对比响应中的正文、摘要和 404 状态。
+类之间通过构造器注入接口。以文章详情为例，Spring 将带 `@Service` 的 `ArticleServiceImpl` 注入 Controller，再将带 `@Repository` 的 `SnapshotArticleRepository` 注入 Service。调试时可以在接口声明处用 IDEA 的 **Go to Implementation** 跳到实现，再给具体方法打断点。
+
+| 接口 | 当前实现 | 主要使用方 |
+| --- | --- | --- |
+| `ArticleService` | `ArticleServiceImpl` | 文章 API、HTML 页面、RSS、站点地图 |
+| `ArticleRepository` | `SnapshotArticleRepository` | 文章服务、公开图片 |
+| `PageRenderer` | `HtmlPageRenderer` | 页面 Controller |
+| `RatingsService` | `RatingsServiceImpl` | Rating API |
+| `OwnerEntries` | `SqliteOwnerEntries` | 工作台、公开快照、每日小记 |
+| `OwnerSeries` | `SqliteOwnerSeries` | 工作台的专栏管理 |
+| `OwnerMedia` | `SqliteOwnerMedia` | 工作台图片库、公开图片 |
+| `OwnerSessions` | `SqliteOwnerSessions` | 工作台登录、会话校验 |
+
+每日小记由 `DailyNoteInbox` 读取站主数据目录中的待处理 JSON，通过 `OwnerEntries` 保存草稿或发布。同日已有记录时会保留原内容。部署包附带 `daily-note-submit.sh`。
 
 ## 公开页面和接口
 

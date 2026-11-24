@@ -13,12 +13,14 @@
 
     <groupId>com.ease2k</groupId>
     <artifactId>ease2k-blog-springboot</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 
     <properties>
         <java.version>27</java.version>
         <commonmark.version>0.27.1</commonmark.version>
         <bouncycastle.version>1.87</bouncycastle.version>
+        <mybatis.version>3.5.19</mybatis.version>
+        <mybatis-spring.version>4.0.0</mybatis-spring.version>
     </properties>
 
     <dependencies>
@@ -34,6 +36,16 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis</artifactId>
+            <version>${mybatis.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis-spring</artifactId>
+            <version>${mybatis-spring.version}</version>
         </dependency>
         <dependency>
             <groupId>org.xerial</groupId>

@@ -73,7 +73,7 @@ public class OwnerController {
         boolean remember = OwnerInput.flag(data, "remember");
         String token = sessions.login(access.credentials(), OwnerInput.text(data, "password", 512), remember);
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE,
-                cookie(token, access.secure(), OwnerSessions.lifetime(remember)).toString()).body(OK);
+                cookie(token, access.secure(), sessions.lifetime(remember)).toString()).body(OK);
     }
 
     @PostMapping("/api/owner/logout")

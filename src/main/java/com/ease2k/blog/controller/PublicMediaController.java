@@ -1,6 +1,7 @@
 package com.ease2k.blog.controller;
 
 import com.ease2k.blog.config.BlogSite;
+import com.ease2k.blog.model.ArticleMedia;
 import com.ease2k.blog.owner.OwnerDatabase;
 import com.ease2k.blog.owner.OwnerMedia;
 import com.ease2k.blog.repository.ArticleRepository;
@@ -37,7 +38,7 @@ public class PublicMediaController {
 
     @GetMapping("/media/{name}")
     public ResponseEntity<Resource> image(@PathVariable String name) throws IOException {
-        if (!ArticleRepository.validImageName(name) || database.enabled() && !articles.exposesMedia(name)) {
+        if (!ArticleMedia.validImageName(name) || database.enabled() && !articles.exposesMedia(name)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         Path path = media.file(name);
