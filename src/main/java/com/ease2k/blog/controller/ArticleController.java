@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -35,10 +36,15 @@ public class ArticleController {
         return new ArticleIndex(articleService.list(), true);
     }
 
-    /** 保留原站的公开内容导出接口。 */
+    /** 旧链接转到公开文章导出地址，导出格式可独立演进。 */
     @GetMapping("/blog")
-    public Map<String, ?> blog() {
-        return Map.of("entries", articleService.articlesForFeed(), "ready", true);
+    public ResponseEntity<Void> legacyExport() {
+        return ResponseEntity.status(HttpStatus.PERMANENT_REDIRECT).location(URI.create("/api/exports/articles")).build();
+    }
+
+    @GetMapping("/exports/articles")
+    public ArticleExport export() {
+        return new ArticleExport(1, articleService.articlesForFeed(), true);
     }
 
     /** 未知 ID 和未公开的文章统一返回 404。 */
@@ -63,6 +69,9 @@ public class ArticleController {
     }
 
     public record ArticleDetail(Article entry) {
+    }
+
+    public record ArticleExport(int version, List<Article> entries, boolean ready) {
     }
 
     public record SearchResults(List<ObjectNode> entries) {

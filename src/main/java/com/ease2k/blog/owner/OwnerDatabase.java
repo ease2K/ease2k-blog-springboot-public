@@ -8,6 +8,7 @@ import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.transaction.SpringManagedTransactionFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.stereotype.Repository;
@@ -48,6 +49,8 @@ public class OwnerDatabase {
         SQLiteDataSource source = new SQLiteDataSource(config);
         source.setUrl("jdbc:sqlite:" + directory.resolve("content.sqlite"));
         new ResourceDatabasePopulator(new ClassPathResource("db/owner-schema.sql")).execute(source);
+        transactions = new TransactionTemplate(new DataSourceTransactionManager(source));
+        migrate(source);
 
         // Mapper 与 Spring 事务使用同一个数据源，才能共用事务中的连接。
         Environment environment = new Environment("owner", new SpringManagedTransactionFactory(), source);
@@ -60,7 +63,17 @@ public class OwnerDatabase {
         mappings.addMapper(OwnerMediaMapper.class);
         mappings.addMapper(OwnerSessionMapper.class);
         sqlSession = new SqlSessionTemplate(new SqlSessionFactoryBuilder().build(mappings));
-        transactions = new TransactionTemplate(new DataSourceTransactionManager(source));
+    }
+
+    private void migrate(SQLiteDataSource source) {
+        JdbcTemplate jdbc = new JdbcTemplate(source);
+        transactions.executeWithoutResult(status -> {
+            int version = jdbc.queryForObject("PRAGMA user_version", Integer.class);
+            if (version > 1) throw new IllegalStateException("站主数据库由更新版本创建，请使用对应版本启动。");
+            if (version == 0) {
+                new ResourceDatabasePopulator(new ClassPathResource("db/owner-migration-1.sql")).execute(source);
+            }
+        });
     }
 
     public boolean enabled() {

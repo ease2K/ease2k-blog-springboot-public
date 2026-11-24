@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Spring Boot blog backup
+
+[Timer]
+OnCalendar=*-*-* 04:15:00 Asia/Shanghai
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

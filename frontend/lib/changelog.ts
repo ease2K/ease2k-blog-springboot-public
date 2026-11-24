@@ -6,6 +6,16 @@ export { changelogPath, changelogCopy } from "./changelog-meta";
 export const releases: Release[] = [
     {
         date: "2026-11-24",
+        title: { zh: "工作台、认证与备份更新", en: "Workspace, sign-in, and backup updates" },
+        changes: [
+            { zh: "工作台请求改由 Spring MVC 解析，列表、媒体查询和导出由服务层统一管理事务。", en: "Spring MVC now handles workspace requests, and the service layer manages transactions for lists, media queries, and exports." },
+            { zh: "站主认证和写请求校验接入 Spring Security，原密码可继续登录。", en: "Spring Security now handles owner authentication and write-request checks. Existing passwords still work." },
+            { zh: "SQLite 自动升级历史表并为首次发布时间查询建立索引，原有文章和草稿可继续读取。", en: "SQLite automatically upgrades the revision history and indexes first-publication lookups while preserving existing articles and drafts." },
+            { zh: "公开文章导出迁到新地址，旧链接会自动跳转。定时备份改用 Python，并校验备份与恢复副本。", en: "Public article exports have a new address and existing links redirect. Scheduled backups now use Python and verify both the snapshot and a restored copy." },
+        ],
+    },
+    {
+        date: "2026-11-24",
         title: { zh: "博客后端接入 MyBatis", en: "The blog backend now uses MyBatis" },
         changes: [
             { zh: "文章、草稿、历史版本、专栏、图片和登录会话的数据库读写改用 MyBatis。", en: "MyBatis now handles database reads and writes for articles, drafts, revision history, series, images, and sign-in sessions." },

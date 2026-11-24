@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/bin/env -i PATH=/usr/bin:/bin /usr/bin/python3 /opt/ease2k-blog-springboot/current/backup-editor.py offsite /var/backups/ease2k-blog "${SSH_ORIGINAL_COMMAND:-}"

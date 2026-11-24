@@ -20,7 +20,7 @@ mkdir -p "$build_dir/frontend" "$build_dir/release/content.example" target/relea
 cp -R frontend/dist "$build_dir/frontend/"
 run_maven -B -ntp -f "$build_dir/pom.xml" package
 cp "$build_dir"/target/*.jar "$build_dir/release/blog.jar"
-cp deploy/*.example deploy/*.service deploy/DEPLOY.md deploy/copy-editor.py "$build_dir/release/"
+cp deploy/*.example deploy/*.service deploy/*.timer deploy/DEPLOY.md deploy/copy-editor.py deploy/backup-editor.py "$build_dir/release/"
 cp deploy/daily-note-submit.sh "$build_dir/release/"
 cp src/main/resources/data/articles.json "$build_dir/release/content.example/"
 

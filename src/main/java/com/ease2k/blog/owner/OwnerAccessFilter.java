@@ -5,9 +5,9 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
 
@@ -17,10 +17,9 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
-@Component
 public class OwnerAccessFilter extends OncePerRequestFilter {
 
-    static final String ACCESS = OwnerAccessFilter.class.getName() + ".ACCESS";
+    static final String ACCESS = "com.ease2k.blog.owner.OwnerAccessFilter.ACCESS";
     private static final String PROXY_HEADER = "X-Ease2k-Owner-Proxy";
 
     private final BlogSite site;
@@ -30,7 +29,7 @@ public class OwnerAccessFilter extends OncePerRequestFilter {
     private final String proxySecret;
 
     public OwnerAccessFilter(BlogSite site, OwnerDatabase database, OwnerSessions sessions, ObjectMapper mapper,
-                             @Value("${blog.owner-proxy-secret:}") String proxySecret) {
+                             String proxySecret) {
         this.site = site;
         this.database = database;
         this.sessions = sessions;
@@ -41,11 +40,25 @@ public class OwnerAccessFilter extends OncePerRequestFilter {
         }
     }
 
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    static boolean ownerPath(HttpServletRequest request) {
         String path = request.getServletPath();
-        return !("/_owner".equals(path) || path.startsWith("/_owner/") || "/owner.html".equals(path)
-                || "/api/owner".equals(path) || path.startsWith("/api/owner/"));
+        return "/_owner".equals(path) || path.startsWith("/_owner/") || "/owner.html".equals(path) || ownerApi(request);
+    }
+
+    static boolean ownerApi(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return "/api/owner".equals(path) || path.startsWith("/api/owner/");
+    }
+
+    static boolean writes(HttpServletRequest request) {
+        String method = request.getMethod();
+        return !"GET".equals(method) && !"HEAD".equals(method);
+    }
+
+    static boolean publicEndpoint(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return "/api/owner/session".equals(path) && "GET".equals(request.getMethod())
+                || "/api/owner/login".equals(path) && "POST".equals(request.getMethod());
     }
 
     @Override
@@ -60,25 +73,19 @@ public class OwnerAccessFilter extends OncePerRequestFilter {
             problem(response, HttpStatus.NOT_FOUND, "页面不存在。");
             return;
         }
-        if (path.startsWith("/api/owner")) {
-            OwnerCredentials credentials = sessions.credentials();
-            OwnerSessions.Session session = sessions.session(request, credentials, site.production());
-            boolean publicEndpoint = "/api/owner/session".equals(path) && "GET".equals(request.getMethod())
-                    || "/api/owner/login".equals(path) && "POST".equals(request.getMethod());
-            boolean writes = !List.of("GET", "HEAD").contains(request.getMethod());
-            if (writes && (!origin.equals(request.getHeader("Origin")) || "cross-site".equals(request.getHeader("Sec-Fetch-Site")))) {
+        if (ownerApi(request)) {
+            if (writes(request) && (!origin.equals(request.getHeader("Origin")) || "cross-site".equals(request.getHeader("Sec-Fetch-Site")))) {
                 problem(response, HttpStatus.FORBIDDEN, "请求来源不正确，请从站主入口重新打开。");
                 return;
             }
-            if (!publicEndpoint && session == null) {
-                problem(response, HttpStatus.UNAUTHORIZED, "登录已过期，请重新登录。");
-                return;
-            }
-            if (!publicEndpoint && writes && !OwnerCredentials.equal(request.getHeader("X-CSRF-Token"), session.csrf())) {
-                problem(response, HttpStatus.FORBIDDEN, "请求校验失败，请重新登录。");
-                return;
-            }
+            OwnerCredentials credentials = sessions.credentials();
+            OwnerSessions.Session session = sessions.session(request, credentials, site.production());
             request.setAttribute(ACCESS, new Access(credentials, session, site.production()));
+            if (session != null) {
+                SecurityContext context = SecurityContextHolder.createEmptyContext();
+                context.setAuthentication(OwnerSecurity.authenticatedOwner());
+                SecurityContextHolder.setContext(context);
+            }
         }
         chain.doFilter(request, response);
     }
@@ -97,7 +104,7 @@ public class OwnerAccessFilter extends OncePerRequestFilter {
         return "http://" + request.getHeader("Host");
     }
 
-    private void problem(HttpServletResponse response, HttpStatus status, String message) throws IOException {
+    void problem(HttpServletResponse response, HttpStatus status, String message) throws IOException {
         response.setStatus(status.value());
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write(mapper.writeValueAsString(Map.of("error", message)));

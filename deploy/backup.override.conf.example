@@ -1,0 +1,6 @@
+[Service]
+ExecStart=
+ExecStart=/usr/bin/python3 /opt/ease2k-blog-springboot/current/backup-editor.py create /var/lib/ease2k-blog-springboot/editor /var/backups/ease2k-blog
+ReadOnlyPaths=
+ReadWritePaths=
+ReadWritePaths=/var/lib/ease2k-blog-springboot/editor /var/backups/ease2k-blog

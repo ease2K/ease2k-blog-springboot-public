@@ -1,0 +1,15 @@
+[Unit]
+Description=Create and verify the Spring Boot blog backup
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 /opt/ease2k-blog-springboot/current/backup-editor.py create /var/lib/ease2k-blog-springboot/editor /var/backups/ease2k-blog
+TimeoutStartSec=10min
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+# SQLite 以只读方式打开数据库，WAL 模式仍可能创建锁和共享内存文件。
+ReadWritePaths=/var/lib/ease2k-blog-springboot/editor /var/backups/ease2k-blog

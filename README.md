@@ -64,7 +64,8 @@ ArticleController.entry()
 | `RatingsService` | 加载并定时更新 Codeforces 和 AtCoder Rating |
 | `OwnerEntries` | 合并基础文章与 SQLite 数据，管理草稿、发布和历史 |
 | `OwnerSeries`、`OwnerMedia` | 管理专栏、图片文件和图片引用 |
-| `OwnerAccessFilter`、`OwnerSessions` | 校验工作台访问来源、会话与写请求令牌 |
+| `OwnerAccessFilter`、`OwnerSecurity`、`OwnerSessions` | 校验工作台访问来源，在 Spring Security 中认证站主并检查写请求令牌 |
+| `OwnerWorkbench` | 在同一事务中读取工作台列表、媒体列表和导出所需的数据 |
 
 阅读代码时，可以从 Controller 的构造器找到注入的依赖，再在详情接口、Service 和 Repository 分别设置断点。工作台的 SQL 定义在 MyBatis Mapper 接口中，例如 [OwnerEntryMapper](src/main/java/com/ease2k/blog/owner/OwnerEntryMapper.java)。[OwnerDatabase](src/main/java/com/ease2k/blog/owner/OwnerDatabase.java) 负责初始化 SQLite，并通过 `SqlSessionTemplate` 让 Mapper 参与现有的 Spring 事务。
 
@@ -96,7 +97,7 @@ ArticleController.entry()
 | `/api/index` | `{ entries, ready }`，用于公开列表的文章摘要 |
 | `/api/entries/{id}` | `{ entry }`，含 Markdown 正文的文章详情 |
 | `/api/search?q=关键词` | `{ entries }`，空查询返回空数组 |
-| `/api/blog` | `{ entries, ready }`，兼容原站的完整公开文章导出 |
+| `/api/exports/articles` | `{ version, entries, ready }`，导出完整公开文章。旧地址 `/api/blog` 返回 308 跳转 |
 | `/api/ratings` | Codeforces 与 AtCoder 的 Rating 和比赛历史 |
 | `/feed.xml`、`/feed/technical.xml`、`/feed/series/{id}.xml` | 全站、技术文章和指定专栏 RSS，每份最多 50 项 |
 | `/sitemap.xml`、`/robots.txt` | 搜索引擎索引配置 |
@@ -120,7 +121,7 @@ curl -fsS "$base/feed.xml"
 - **在线文章**存于工作台的 `content.sqlite`。同 ID 的在线记录和回收站标记覆盖基础文章。公开查询只读公开快照，私有文章、样例和空正文不进入公开列表、搜索或 RSS。
 - **编辑草稿**保存在 `working_copies` 中。编辑已发布文章时，自动保存的草稿可在工作台恢复，读者继续看到上一次发布的版本。点击发布后才更新公开正文。手动对已发布文章选择「撤下并存为草稿」会从公开站撤下该文章。回收站恢复后的记录为私有草稿。
 - **图片**存于工作台的 `media/`。启用工作台时，公开图片路由会检查当前公开内容是否引用该图片。只读内容目录的导入图片放在 `public-media/`。
-- **版本**用 `revision` 区分，防止旧编辑覆盖较新的修改。版本历史保留在 `history`，从历史载入内容并保存会写入新版本。
+- **版本**用 `revision` 区分，防止旧编辑覆盖较新的修改。版本历史保留在 `history`，从历史载入内容并保存会写入新版本。应用启动时按数据库版本迁移，历史的公开状态和文章日期通过可索引的生成列参与首次发布判断。
 
 ## 在本地使用站主工作台
 

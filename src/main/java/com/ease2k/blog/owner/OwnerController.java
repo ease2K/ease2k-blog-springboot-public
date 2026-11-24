@@ -1,5 +1,6 @@
 package com.ease2k.blog.owner;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
@@ -10,12 +11,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -26,7 +27,6 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 
 /** 站主工作台兼容原有前端。访问范围、会话与 CSRF 由 OwnerAccessFilter 统一校验。 */
@@ -36,16 +36,16 @@ public class OwnerController {
     private static final MediaType WEBP = MediaType.parseMediaType("image/webp");
     private static final Map<String, Boolean> OK = Map.of("ok", true);
     private final OwnerSessions sessions;
-    private final OwnerDatabase database;
+    private final OwnerWorkbench workbench;
     private final OwnerEntries entries;
     private final OwnerSeries series;
     private final OwnerMedia media;
     private final ObjectMapper mapper;
 
-    public OwnerController(OwnerSessions sessions, OwnerDatabase database, OwnerEntries entries,
+    public OwnerController(OwnerSessions sessions, OwnerWorkbench workbench, OwnerEntries entries,
                            OwnerSeries series, OwnerMedia media, ObjectMapper mapper) {
         this.sessions = sessions;
-        this.database = database;
+        this.workbench = workbench;
         this.entries = entries;
         this.series = series;
         this.media = media;
@@ -58,8 +58,7 @@ public class OwnerController {
     }
 
     @GetMapping("/api/owner/session")
-    public ObjectNode session(HttpServletRequest request) {
-        OwnerAccessFilter.Access access = access(request);
+    public ObjectNode session(@RequestAttribute(OwnerAccessFilter.ACCESS) OwnerAccessFilter.Access access) {
         ObjectNode view = mapper.createObjectNode().put("configured", access.credentials() != null)
                 .put("authenticated", access.session() != null);
         if (access.session() != null) view.put("csrf", access.session().csrf());
@@ -67,46 +66,40 @@ public class OwnerController {
     }
 
     @PostMapping("/api/owner/login")
-    public ResponseEntity<?> login(HttpServletRequest request) throws IOException {
-        OwnerAccessFilter.Access access = access(request);
-        JsonNode data = body(request);
-        boolean remember = OwnerInput.flag(data, "remember");
-        String token = sessions.login(access.credentials(), OwnerInput.text(data, "password", 512), remember);
+    public ResponseEntity<?> login(@RequestAttribute(OwnerAccessFilter.ACCESS) OwnerAccessFilter.Access access,
+                                   @RequestBody LoginRequest input) {
+        String token = sessions.login(access.credentials(), input.password(), input.remember());
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE,
-                cookie(token, access.secure(), sessions.lifetime(remember)).toString()).body(OK);
+                cookie(token, access.secure(), sessions.lifetime(input.remember())).toString()).body(OK);
     }
 
     @PostMapping("/api/owner/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request) {
-        OwnerAccessFilter.Access access = access(request);
+    public ResponseEntity<?> logout(@RequestAttribute(OwnerAccessFilter.ACCESS) OwnerAccessFilter.Access access) {
         sessions.logout(access.session());
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE,
                 cookie("", access.secure(), Duration.ZERO).toString()).body(OK);
     }
 
     @GetMapping("/api/owner/entries")
-    public Map<String, ?> entries() {
-        return database.transaction(false, () -> Map.of("entries", entries.all(), "trash", entries.trash(),
-                "drafts", entries.drafts(), "series", entries.series()));
+    public OwnerWorkbench.Entries entries() {
+        return workbench.entries();
     }
 
     @GetMapping("/api/owner/export")
-    public ResponseEntity<?> export() {
+    public ResponseEntity<OwnerWorkbench.Export> export() {
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"ease2k-editor-backup.json\"")
-                .body(database.transaction(false, () -> Map.of("version", 2, "exportedAt", Instant.now().toString(),
-                        "entries", entries.all(), "trash", entries.trash(), "drafts", entries.drafts(),
-                        "series", entries.series(), "media", media.list())));
+                .body(workbench.export());
     }
 
     @PutMapping("/api/owner/entries/{id}")
-    public Map<String, ObjectNode> write(@PathVariable String id, HttpServletRequest request) throws IOException {
-        return Map.of("entry", entries.write(id, body(request)));
+    public Map<String, ObjectNode> write(@PathVariable String id, @RequestBody JsonNode input) {
+        return Map.of("entry", entries.write(id, input));
     }
 
     @DeleteMapping("/api/owner/entries/{id}")
-    public Map<String, Boolean> trash(@PathVariable String id, HttpServletRequest request) throws IOException {
-        entries.trash(id, body(request));
+    public Map<String, Boolean> trash(@PathVariable String id, @RequestBody JsonNode input) {
+        entries.trash(id, input);
         return OK;
     }
 
@@ -116,13 +109,13 @@ public class OwnerController {
     }
 
     @PostMapping("/api/owner/entries/{id}/restore")
-    public Map<String, ObjectNode> restore(@PathVariable String id, HttpServletRequest request) throws IOException {
-        return Map.of("entry", entries.restore(id, body(request)));
+    public Map<String, ObjectNode> restore(@PathVariable String id, @RequestBody JsonNode input) {
+        return Map.of("entry", entries.restore(id, input));
     }
 
     @PutMapping("/api/owner/drafts/{id}")
-    public Map<String, ObjectNode> draft(@PathVariable String id, HttpServletRequest request) throws IOException {
-        return Map.of("draft", entries.saveDraft(id, body(request)));
+    public Map<String, ObjectNode> draft(@PathVariable String id, @RequestBody JsonNode input) {
+        return Map.of("draft", entries.saveDraft(id, input));
     }
 
     @GetMapping("/api/owner/series")
@@ -131,13 +124,13 @@ public class OwnerController {
     }
 
     @PutMapping("/api/owner/series")
-    public Map<String, ObjectNode> saveSeries(HttpServletRequest request) throws IOException {
-        return Map.of("series", series.save(body(request)));
+    public Map<String, ObjectNode> saveSeries(@RequestBody JsonNode input) {
+        return Map.of("series", series.save(input));
     }
 
     @GetMapping("/api/owner/media")
-    public Map<String, ?> media() {
-        return database.transaction(false, () -> Map.of("media", media.list()));
+    public OwnerWorkbench.Media media() {
+        return workbench.media();
     }
 
     @PostMapping("/api/owner/media")
@@ -163,47 +156,29 @@ public class OwnerController {
     }
 
     @PutMapping("/api/owner/media/{name}")
-    public Map<String, Boolean> editMedia(@PathVariable String name, HttpServletRequest request) throws IOException {
-        media.edit(name, body(request));
+    public Map<String, Boolean> editMedia(@PathVariable String name, @RequestBody JsonNode input) {
+        media.edit(name, input);
         return OK;
     }
 
     @PostMapping("/api/owner/media/{name}/replace")
-    public Map<String, Integer> replaceMedia(@PathVariable String name, HttpServletRequest request) throws IOException {
-        return Map.of("changed", media.replace(name, body(request)));
-    }
-
-    @ExceptionHandler(OwnerProblem.class)
-    public ResponseEntity<Map<String, String>> error(OwnerProblem problem) {
-        ResponseEntity.BodyBuilder status = ResponseEntity.status(problem.status());
-        if (problem.status() == HttpStatus.TOO_MANY_REQUESTS) status.header(HttpHeaders.RETRY_AFTER, "900");
-        return status.body(Map.of("error", problem.getMessage()));
-    }
-
-    private JsonNode body(HttpServletRequest request) throws IOException {
-        String contentType = request.getContentType();
-        if (contentType == null || !MediaType.APPLICATION_JSON.isCompatibleWith(MediaType.parseMediaType(contentType))) {
-            throw new OwnerProblem(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "请求需要使用 JSON 格式。");
-        }
-        int max = 2 * 1024 * 1024;
-        byte[] bytes = request.getInputStream().readNBytes(max + 1);
-        if (bytes.length > max) throw new OwnerProblem(HttpStatus.PAYLOAD_TOO_LARGE, "文章内容过大。");
-        try {
-            JsonNode result = mapper.readTree(bytes);
-            OwnerInput.requireObject(result, "需要 JSON 对象。");
-            return result;
-        } catch (tools.jackson.core.JacksonException ignored) {
-            throw OwnerProblem.bad("JSON 格式不正确。");
-        }
-    }
-
-    private static OwnerAccessFilter.Access access(HttpServletRequest request) {
-        return (OwnerAccessFilter.Access) request.getAttribute(OwnerAccessFilter.ACCESS);
+    public Map<String, Integer> replaceMedia(@PathVariable String name, @RequestBody JsonNode input) {
+        return Map.of("changed", media.replace(name, input));
     }
 
     private static ResponseCookie cookie(String token, boolean secure, Duration lifetime) {
         return ResponseCookie.from(secure ? "__Host-ease_owner" : "ease_owner", token)
                 .httpOnly(true).sameSite("Strict").secure(secure).path(secure ? "/" : "/api/owner")
                 .maxAge(lifetime).build();
+    }
+
+    public record LoginRequest(String password, boolean remember) {
+
+        @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+        public static LoginRequest from(JsonNode input) {
+            OwnerInput.requireObject(input, "需要 JSON 对象。");
+            boolean remember = OwnerInput.flag(input, "remember");
+            return new LoginRequest(OwnerInput.text(input, "password", 512), remember);
+        }
     }
 }

@@ -36,8 +36,8 @@ interface OwnerEntryMapper {
     List<String> historyPayloads();
 
     @Select("""
-            SELECT json_extract(payload, '$.date') FROM history
-            WHERE id=#{id} AND json_extract(payload, '$.visibility')='public' ORDER BY revision LIMIT 1
+            SELECT article_date FROM history
+            WHERE id=#{id} AND visibility='public' ORDER BY revision LIMIT 1
             """)
     String firstPublishedDate(@Param("id") String id);
 

@@ -1,6 +1,6 @@
 # 部署与迁移 Spring Boot 博客
 
-生产环境由 Nginx 终止 HTTPS，Spring Boot 在本机回环地址提供公开站点、工作台和 API。下面以 Linux、systemd、`127.0.0.1:8088` 和 `blog.example.com` 为例。构建机需要 [README 中的开发工具](../README.md#本地启动)。服务器运行 JAR 需要 JDK 27，迁移私有数据另外使用 Python 3。
+生产环境由 Nginx 终止 HTTPS，Spring Boot 在本机回环地址提供公开站点、工作台和 API。下面以 Linux、systemd、`127.0.0.1:8088` 和 `blog.example.com` 为例。构建机需要 [README 中的开发工具](../README.md#本地启动)。服务器运行 JAR 需要 JDK 27，备份和迁移需要带生成列和 JSON 函数支持的 Python 3 SQLite（3.38 或更新版本可直接使用）。
 
 | 路径 | 用途 |
 | --- | --- |
@@ -20,7 +20,7 @@ mkdir release-1
 tar -xzf ease2k-blog-springboot.tar.gz -C release-1
 ```
 
-部署包包含 `blog.jar`、公开基础文章、systemd 服务、Nginx 配置示例、数据复制脚本和每日小记提交脚本。以下命令在解包目录的父目录执行。服务器侧安装命令使用 root。
+部署包包含 `blog.jar`、公开基础文章、systemd 服务、Nginx 配置示例、备份与数据复制脚本和每日小记提交脚本。以下命令在解包目录的父目录执行。服务器侧安装命令使用 root。
 
 ## 2. 安装程序和基础文章
 
@@ -32,6 +32,7 @@ data=/var/lib/ease2k-blog-springboot
 
 install -d -m 755 "$app/releases/release-1" "$data/releases/content-1"
 install -m 644 release-1/blog.jar "$app/releases/release-1/blog.jar"
+install -m 644 release-1/backup-editor.py "$app/releases/release-1/backup-editor.py"
 install -m 755 release-1/daily-note-submit.sh "$app/releases/release-1/daily-note-submit.sh"
 install -m 644 release-1/content.example/articles.json "$data/releases/content-1/articles.json"
 ln -s "$app/releases/release-1" "$app/current"
@@ -123,6 +124,7 @@ readlink "$app/current"
 
 install -d -m 755 "$app/releases/release-2"
 install -m 644 release-2/blog.jar "$app/releases/release-2/blog.jar"
+install -m 644 release-2/backup-editor.py "$app/releases/release-2/backup-editor.py"
 install -m 755 release-2/daily-note-submit.sh "$app/releases/release-2/daily-note-submit.sh"
 ln -s "$app/releases/release-2" "$app/current.next"
 mv -Tf "$app/current.next" "$app/current"
@@ -142,20 +144,26 @@ curl -fsS http://127.0.0.1:8088/healthz
 
 完整站主备份包含 SQLite、`owner.json` 和 `media/`。另行保存实际使用的基础文章目录和部署配置。工作台导出的文章 JSON 适合内容核对，完整恢复使用文件备份。
 
-没有原站备份服务时，可以先停止工作台写入，再用 `copy-editor.py` 复制到新的私有目录。恢复时先保存当前目录，把备份复制到新目录并恢复服务账号所有权，再让应用使用该副本。重启后核对草稿、历史、图片和公开文章。
+`backup-editor.py` 通过 SQLite 备份接口复制已提交的数据，包括 WAL 中的事务。每份快照生成 SHA-256 清单，验证文件、数据库和恢复副本后才发布到备份目录，默认保留最近 14 份。备份目录及清单与现有 Mac 拉取工具兼容。
 
-已有原 Node.js 站的 `ease2k-blog-backup.timer` 时，可在正式切换后安装随包提供的 systemd 覆盖文件。它保留原来的备份路径、校验、保留策略和 Mac 只读拉取入口，并将数据输入指向 Spring Boot 编辑目录。此方式继续使用原站的 Node.js 备份程序。
+安装定时备份时，将 `release-1` 替换成对应的解包目录。已有 Node.js 版备份服务时，覆盖原本的 `springboot.conf`，使现有定时器使用 Python 程序。这样已有备份和 Mac 配置可以继续使用。
 
 ```bash
+install -d -m 700 /var/backups/ease2k-blog
+install -m 644 release-1/ease2k-blog-backup.service release-1/ease2k-blog-backup.timer /etc/systemd/system/
 install -d -m 755 /etc/systemd/system/ease2k-blog-backup.service.d
-install -m 644 release-1/legacy-backup.override.conf.example /etc/systemd/system/ease2k-blog-backup.service.d/springboot.conf
+install -m 644 release-1/backup.override.conf.example /etc/systemd/system/ease2k-blog-backup.service.d/springboot.conf
 systemctl daemon-reload
+systemctl show ease2k-blog-backup.service -p ExecStart
 systemctl start ease2k-blog-backup.service
+systemctl enable --now ease2k-blog-backup.timer
 journalctl -u ease2k-blog-backup.service -n 20 --no-pager
 systemctl list-timers ease2k-blog-backup.timer
 ```
 
-原站路径有定制时先检查覆盖文件中的程序路径、数据目录和备份目标。切回 Node.js 站时一并恢复备份任务的输入目录。
+已有 Mac 只读拉取通道时，用 `install -m 755 release-1/backup-export.sh.example /usr/local/sbin/ease2k-backup-export` 更新服务端程序，再从 Mac 验证 `status` 和一次实际拉取。现有 SSH 强制命令路径和密钥可以继续用。原站路径有定制时，在安装前核对备份脚本的数据目录和备份目标。若回退到不含 Python 脚本的发布包或切回 Node.js，先恢复相应的备份服务配置和 SSH 导出程序。
+
+恢复时先保留当前编辑目录，再用 `python3 release-1/backup-editor.py verify 备份目录` 验证快照。用 `copy-editor.py` 将快照复制到新的私有目录并恢复服务账号所有权。切换数据目录、重启应用后，核对旧密码登录、草稿、历史、图片和公开文章。新目录里的旧会话会被清理。
 
 ## 7. 定时提交每日小记
 

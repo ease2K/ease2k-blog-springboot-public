@@ -3,6 +3,9 @@ package com.ease2k.blog.owner;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -23,11 +26,13 @@ public class SqliteOwnerSessions implements OwnerSessions {
     private final OwnerDatabase database;
     private final OwnerSessionMapper sessionMapper;
     private final ObjectMapper mapper;
+    private final AuthenticationManager authentication;
 
-    public SqliteOwnerSessions(OwnerDatabase database, ObjectMapper mapper) throws IOException {
+    public SqliteOwnerSessions(OwnerDatabase database, ObjectMapper mapper, AuthenticationManager authentication) throws IOException {
         this.database = database;
         this.sessionMapper = database.mapper(OwnerSessionMapper.class);
         this.mapper = mapper;
+        this.authentication = authentication;
         if (database.enabled()) credentials();
     }
 
@@ -62,7 +67,11 @@ public class SqliteOwnerSessions implements OwnerSessions {
             }
             return null;
         });
-        if (!config.verifies(password)) throw new OwnerProblem(HttpStatus.UNAUTHORIZED, "密码不正确。");
+        try {
+            authentication.authenticate(UsernamePasswordAuthenticationToken.unauthenticated(config, password));
+        } catch (BadCredentialsException error) {
+            throw new OwnerProblem(HttpStatus.UNAUTHORIZED, error.getMessage());
+        }
         String token = OwnerCredentials.token();
         database.transaction(false, () -> {
             sessionMapper.clearAttempts(config.version());
