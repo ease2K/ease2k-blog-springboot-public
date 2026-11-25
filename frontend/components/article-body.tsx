@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useEffect, useRef } from "react";
+import { Component, lazy, Suspense, useEffect, useMemo, useRef } from "react";
 import type { OutlineHandler } from "@/components/article-toc";
 
 type Props = { text: string; lang: "zh" | "en"; onOutline?: OutlineHandler; owner?: boolean; searchQuery?: string };
@@ -42,7 +42,7 @@ class BodyBoundary extends Component<Props & { children: React.ReactNode }, { fa
 }
 export default function ArticleBody(props: Props) {
     const MarkdownBody = useRef(loaded?.default || LazyMarkdown).current;
-    const format = bodyFormat(props.text);
+    const format = useMemo(() => bodyFormat(props.text), [props.text]);
     if (format === "plain") return <PlainBody {...props} />;
     return <BodyBoundary {...props}>
         <Suspense fallback={<p className="language-note" role="status">{props.lang === "zh" ? "正在排版正文…" : "Formatting article…"}</p>}>

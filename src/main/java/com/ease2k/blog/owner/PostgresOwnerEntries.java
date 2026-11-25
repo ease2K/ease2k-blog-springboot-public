@@ -42,21 +42,28 @@ public class PostgresOwnerEntries implements OwnerEntries {
 
     @Override
     public List<ObjectNode> published() {
-        return database.read(() -> all().stream().filter(SeedArticles::visible).toList());
+        return database.read(() -> entries(true));
     }
 
     @Override
     public List<ObjectNode> all() {
+        return entries(false);
+    }
+
+    private List<ObjectNode> entries(boolean publishedOnly) {
         Map<String, ObjectNode> rows = new LinkedHashMap<>();
-        seeds.entries().forEach((id, entry) -> rows.put(id, view(entry, 0, null)));
+        seeds.entries().forEach((id, entry) -> rows.put(id,
+                publishedOnly ? mapper.createObjectNode().setAll(entry) : view(entry, 0, null)));
         entryMapper.entries().forEach(row -> {
             ObjectNode entry = object(row.payload());
             String id = entry.path("id").asString();
-            if (row.deleted()) rows.remove(id);
-            else rows.put(id, view(entry, row.revision(), row.updatedAt()));
+            // 私有记录和回收站记录仍会覆盖同 ID 的基础文章。
+            if (row.deleted() || publishedOnly && !SeedArticles.visible(entry)) rows.remove(id);
+            else rows.put(id, publishedOnly ? entry : view(entry, row.revision(), row.updatedAt()));
         });
         Map<String, ObjectNode> series = new LinkedHashMap<>();
-        for (ObjectNode item : series()) {
+        for (var row : seriesMapper.series()) {
+            ObjectNode item = object(row.payload());
             item.remove(List.of("revision", "updatedAt"));
             series.put(item.path("id").asString(), item);
         }
