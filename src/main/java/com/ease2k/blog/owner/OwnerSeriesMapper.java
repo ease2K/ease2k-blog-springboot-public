@@ -15,15 +15,20 @@ interface OwnerSeriesMapper {
     @Select("SELECT payload FROM series WHERE id=#{id}")
     String payload(@Param("id") String id);
 
-    @Insert("INSERT OR IGNORE INTO series (id, payload, revision, updated_at) VALUES (#{id}, #{payload}, 1, #{updatedAt})")
+    @Insert("""
+            INSERT INTO series (id, payload, revision, updated_at) VALUES (#{id}, #{payload}, 1, #{updatedAt})
+            ON CONFLICT (id) DO NOTHING
+            """)
     void seedSeries(@Param("id") String id, @Param("payload") String payload, @Param("updatedAt") String updatedAt);
 
     @Insert("INSERT INTO series (id, payload, revision, updated_at) VALUES (#{id}, #{payload}, 1, #{updatedAt})")
     void insertSeries(@Param("id") String id, @Param("payload") String payload, @Param("updatedAt") String updatedAt);
 
     @Insert("""
-            INSERT OR REPLACE INTO series (id, payload, revision, updated_at)
+            INSERT INTO series (id, payload, revision, updated_at)
             VALUES (#{id}, #{payload}, #{revision}, #{updatedAt})
+            ON CONFLICT (id) DO UPDATE SET payload=EXCLUDED.payload, revision=EXCLUDED.revision,
+                updated_at=EXCLUDED.updated_at
             """)
     void saveSeries(@Param("id") String id, @Param("payload") String payload,
                     @Param("revision") int revision, @Param("updatedAt") String updatedAt);

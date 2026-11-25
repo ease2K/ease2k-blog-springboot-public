@@ -6,6 +6,8 @@
 .DS_Store
 /editor/
 /data/
+/backups/
+__pycache__/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm

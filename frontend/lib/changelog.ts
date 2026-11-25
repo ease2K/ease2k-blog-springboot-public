@@ -5,6 +5,15 @@ export { changelogPath, changelogCopy } from "./changelog-meta";
 
 export const releases: Release[] = [
     {
+        date: "2026-11-25",
+        title: { zh: "博客数据迁移到 PostgreSQL", en: "Moved blog data to PostgreSQL" },
+        changes: [
+            { zh: "文章、草稿、修订历史、专栏和图片记录迁入 PostgreSQL，原有文章链接继续可用。", en: "Articles, drafts, revision history, series, and image records moved to PostgreSQL. Existing article links still work." },
+            { zh: "工作台继续使用原密码，已有登录会话会在迁移时失效。", en: "The existing workspace password still works. Sessions from before the migration expire." },
+            { zh: "更新站点备份方式，数据库备份与站主凭据、上传图片一并保存。", en: "Site backups now save the PostgreSQL archive together with owner credentials and uploaded images." },
+        ],
+    },
+    {
         date: "2026-11-24",
         title: { zh: "简化文章列表和搜索处理", en: "Simplified article lists and search" },
         changes: [

@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-public class SqliteOwnerMedia implements OwnerMedia {
+public class PostgresOwnerMedia implements OwnerMedia {
 
     private final OwnerDatabase database;
     private final OwnerMediaMapper mediaMapper;
@@ -30,7 +30,7 @@ public class SqliteOwnerMedia implements OwnerMedia {
     private final OwnerEntries entries;
     private final ObjectMapper mapper;
 
-    public SqliteOwnerMedia(OwnerDatabase database, OwnerEntries entries, ObjectMapper mapper) throws IOException {
+    public PostgresOwnerMedia(OwnerDatabase database, OwnerEntries entries, ObjectMapper mapper) throws IOException {
         this.database = database;
         this.mediaMapper = database.mapper(OwnerMediaMapper.class);
         this.entryMapper = database.mapper(OwnerEntryMapper.class);

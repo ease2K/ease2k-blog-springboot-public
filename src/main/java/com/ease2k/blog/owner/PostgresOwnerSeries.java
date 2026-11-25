@@ -11,7 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Service
-public class SqliteOwnerSeries implements OwnerSeries {
+public class PostgresOwnerSeries implements OwnerSeries {
 
     private final OwnerDatabase database;
     private final OwnerSeriesMapper seriesMapper;
@@ -19,7 +19,7 @@ public class SqliteOwnerSeries implements OwnerSeries {
     private final OwnerEntries entries;
     private final ObjectMapper mapper;
 
-    public SqliteOwnerSeries(OwnerDatabase database, OwnerEntries entries, ObjectMapper mapper) {
+    public PostgresOwnerSeries(OwnerDatabase database, OwnerEntries entries, ObjectMapper mapper) {
         this.database = database;
         this.seriesMapper = database.mapper(OwnerSeriesMapper.class);
         this.mediaMapper = database.mapper(OwnerMediaMapper.class);

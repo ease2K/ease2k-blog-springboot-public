@@ -13,7 +13,7 @@ interface OwnerEntryMapper {
     @Select("SELECT payload, revision, deleted, updated_at FROM entries")
     List<EntryRow> entries();
 
-    @Select("SELECT payload, revision, deleted, updated_at FROM entries WHERE deleted=1 ORDER BY updated_at DESC")
+    @Select("SELECT payload, revision, deleted, updated_at FROM entries WHERE deleted ORDER BY updated_at DESC")
     List<EntryRow> trash();
 
     @Select("SELECT payload, revision, deleted, updated_at FROM entries WHERE id=#{id}")
@@ -23,8 +23,10 @@ interface OwnerEntryMapper {
     boolean exists(@Param("id") String id);
 
     @Insert("""
-            INSERT OR REPLACE INTO entries (id, payload, revision, deleted, updated_at)
+            INSERT INTO entries (id, payload, revision, deleted, updated_at)
             VALUES (#{id}, #{payload}, #{revision}, #{deleted}, #{updatedAt})
+            ON CONFLICT (id) DO UPDATE SET payload=EXCLUDED.payload, revision=EXCLUDED.revision,
+                deleted=EXCLUDED.deleted, updated_at=EXCLUDED.updated_at
             """)
     void saveEntry(@Param("id") String id, @Param("payload") String payload, @Param("revision") int revision,
                    @Param("deleted") boolean deleted, @Param("updatedAt") String updatedAt);
@@ -42,17 +44,20 @@ interface OwnerEntryMapper {
     String firstPublishedDate(@Param("id") String id);
 
     @Insert("""
-            INSERT OR IGNORE INTO history (id, revision, payload, deleted, saved_at)
-            VALUES (#{id}, 0, #{payload}, 0, #{savedAt})
+            INSERT INTO history (id, revision, payload, deleted, saved_at, visibility, article_date)
+            VALUES (#{id}, 0, #{payload}, FALSE, #{savedAt}, #{visibility}, #{articleDate})
+            ON CONFLICT (id, revision) DO NOTHING
             """)
-    void seedHistory(@Param("id") String id, @Param("payload") String payload, @Param("savedAt") String savedAt);
+    void seedHistory(@Param("id") String id, @Param("payload") String payload, @Param("savedAt") String savedAt,
+                     @Param("visibility") String visibility, @Param("articleDate") String articleDate);
 
     @Insert("""
-            INSERT INTO history (id, revision, payload, deleted, saved_at)
-            VALUES (#{id}, #{revision}, #{payload}, #{deleted}, #{savedAt})
+            INSERT INTO history (id, revision, payload, deleted, saved_at, visibility, article_date)
+            VALUES (#{id}, #{revision}, #{payload}, #{deleted}, #{savedAt}, #{visibility}, #{articleDate})
             """)
     void appendHistory(@Param("id") String id, @Param("revision") int revision, @Param("payload") String payload,
-                       @Param("deleted") boolean deleted, @Param("savedAt") String savedAt);
+                       @Param("deleted") boolean deleted, @Param("savedAt") String savedAt,
+                       @Param("visibility") String visibility, @Param("articleDate") String articleDate);
 
     @Delete("DELETE FROM history WHERE id=#{id} AND revision < #{revision}")
     void pruneHistory(@Param("id") String id, @Param("revision") int revision);
@@ -64,8 +69,10 @@ interface OwnerEntryMapper {
     int draftRevision(@Param("id") String id);
 
     @Insert("""
-            INSERT OR REPLACE INTO working_copies (id, payload, base_revision, creating, revision, saved_at)
+            INSERT INTO working_copies (id, payload, base_revision, creating, revision, saved_at)
             VALUES (#{id}, #{payload}, #{baseRevision}, #{creating}, #{revision}, #{savedAt})
+            ON CONFLICT (id) DO UPDATE SET payload=EXCLUDED.payload, base_revision=EXCLUDED.base_revision,
+                creating=EXCLUDED.creating, revision=EXCLUDED.revision, saved_at=EXCLUDED.saved_at
             """)
     void saveDraft(@Param("id") String id, @Param("payload") String payload, @Param("baseRevision") int baseRevision,
                    @Param("creating") boolean creating, @Param("revision") int revision, @Param("savedAt") String savedAt);

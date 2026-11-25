@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
-public class SqliteOwnerEntries implements OwnerEntries {
+public class PostgresOwnerEntries implements OwnerEntries {
 
     private final OwnerDatabase database;
     private final OwnerEntryMapper entryMapper;
@@ -25,7 +25,7 @@ public class SqliteOwnerEntries implements OwnerEntries {
     private final SeedArticles seeds;
     private final ObjectMapper mapper;
 
-    public SqliteOwnerEntries(OwnerDatabase database, SeedArticles seeds, ObjectMapper mapper) {
+    public PostgresOwnerEntries(OwnerDatabase database, SeedArticles seeds, ObjectMapper mapper) {
         this.database = database;
         this.entryMapper = database.mapper(OwnerEntryMapper.class);
         this.seriesMapper = database.mapper(OwnerSeriesMapper.class);
@@ -42,7 +42,7 @@ public class SqliteOwnerEntries implements OwnerEntries {
 
     @Override
     public List<ObjectNode> published() {
-        return database.transaction(false, () -> all().stream().filter(SeedArticles::visible).toList());
+        return database.read(() -> all().stream().filter(SeedArticles::visible).toList());
     }
 
     @Override
@@ -206,10 +206,15 @@ public class SqliteOwnerEntries implements OwnerEntries {
         }
 
         int next = current + 1;
-        if (previous != null && row == null) entryMapper.seedHistory(id, json(previous), now);
+        if (previous != null && row == null) {
+            entryMapper.seedHistory(id, json(previous), now,
+                    previous.path("visibility").asString(null), previous.path("date").asString(null));
+        }
         String text = json(entry);
         entryMapper.saveEntry(id, text, next, remove, now);
-        entryMapper.appendHistory(id, next, text, remove, now);
+        // 与历史正文一起提交索引字段，使 JSON 中转义的空字符仍可原样存入正文。
+        entryMapper.appendHistory(id, next, text, remove, now,
+                entry.path("visibility").asString(null), entry.path("date").asString(null));
         entryMapper.pruneHistory(id, next - 29);
         if (!mediaOnly) entryMapper.deleteDraft(id);
         if (remove) return view(entry, next, now);

@@ -20,12 +20,12 @@ public class OwnerWorkbenchService implements OwnerWorkbench {
 
     @Override
     public Entries entries() {
-        return database.transaction(false, this::entryView);
+        return database.read(this::entryView);
     }
 
     @Override
     public Export export() {
-        return database.transaction(false, () -> {
+        return database.read(() -> {
             String exportedAt = Instant.now().toString();
             Entries view = entryView();
             return new Export(2, exportedAt, view.entries(), view.trash(), view.drafts(), view.series(), media.list());
@@ -34,7 +34,7 @@ public class OwnerWorkbenchService implements OwnerWorkbench {
 
     @Override
     public Media media() {
-        return database.transaction(false, () -> new Media(media.list()));
+        return database.read(() -> new Media(media.list()));
     }
 
     private Entries entryView() {

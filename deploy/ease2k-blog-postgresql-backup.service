@@ -1,0 +1,16 @@
+[Unit]
+Description=Create and verify the Spring Boot blog backup
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+EnvironmentFile=/etc/ease2k-blog-springboot-postgresql.env
+ExecStart=/usr/bin/python3 /opt/ease2k-blog-springboot-postgresql/current/deploy/backup-editor.py create /var/lib/ease2k-blog-springboot-postgresql/editor /var/backups/ease2k-blog-postgresql
+TimeoutStartSec=10min
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/var/lib/ease2k-blog-springboot-postgresql/editor
+ReadWritePaths=/var/backups/ease2k-blog-postgresql

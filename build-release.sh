@@ -16,17 +16,22 @@ npm --prefix frontend run build
 build_dir=$(mktemp -d)
 trap 'rm -rf -- "$build_dir"' EXIT
 cp -R pom.xml src "$build_dir/"
-mkdir -p "$build_dir/frontend" "$build_dir/release/content.example" target/release
+mkdir -p "$build_dir/frontend" "$build_dir/release/content.example" "$build_dir/release/deploy" \
+    "$build_dir/release/scripts" target/release
 cp -R frontend/dist "$build_dir/frontend/"
 run_maven -B -ntp -f "$build_dir/pom.xml" package
 cp "$build_dir"/target/*.jar "$build_dir/release/blog.jar"
-cp deploy/*.example deploy/*.service deploy/*.timer deploy/DEPLOY.md deploy/copy-editor.py deploy/backup-editor.py "$build_dir/release/"
-cp deploy/daily-note-submit.sh "$build_dir/release/"
+cp start-local.sh "$build_dir/release/"
+cp scripts/local-postgres.sh "$build_dir/release/scripts/"
+cp deploy/*.example deploy/*.service deploy/*.timer deploy/DEPLOY.md deploy/*.py \
+    deploy/daily-note-submit.sh "$build_dir/release/deploy/"
+cp src/main/resources/db/owner-schema.sql "$build_dir/release/deploy/"
 cp src/main/resources/data/articles.json "$build_dir/release/content.example/"
 
-archive=ease2k-blog-springboot.tar.gz
+archive=ease2k-blog-springboot-postgresql.tar.gz
 COPYFILE_DISABLE=1 tar -czf "$build_dir/$archive" -C "$build_dir/release" .
 mv "$build_dir/$archive" "target/release/$archive"
+mv "$build_dir/release/blog.jar" target/release/blog.jar
 (
     cd target/release
     if command -v sha256sum >/dev/null 2>&1; then

@@ -93,7 +93,7 @@ public class OwnerSecurity {
 
         @Override
         public void saveToken(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
-            // 工作台令牌由 SQLite 会话派生，退出时删除该会话即可失效。
+            // 工作台令牌由数据库会话派生，退出时删除该会话即可失效。
         }
 
         @Override

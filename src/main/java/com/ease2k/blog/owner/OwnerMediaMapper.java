@@ -15,18 +15,19 @@ interface OwnerMediaMapper {
     @Select("SELECT name, label, deleted, revision, created_at FROM media_assets WHERE name=#{name}")
     Asset asset(@Param("name") String name);
 
-    @Select("SELECT EXISTS (SELECT 1 FROM media_assets WHERE name=#{name} AND deleted=0)")
+    @Select("SELECT EXISTS (SELECT 1 FROM media_assets WHERE name=#{name} AND NOT deleted)")
     boolean active(@Param("name") String name);
 
-    @Select("SELECT EXISTS (SELECT 1 FROM media_assets WHERE name=#{name} AND deleted=1)")
+    @Select("SELECT EXISTS (SELECT 1 FROM media_assets WHERE name=#{name} AND deleted)")
     boolean deleted(@Param("name") String name);
 
     @Update("UPDATE media_assets SET label=#{label}, deleted=#{deleted}, revision=revision+1 WHERE name=#{name}")
     void edit(@Param("name") String name, @Param("label") String label, @Param("deleted") boolean deleted);
 
     @Insert("""
-            INSERT OR IGNORE INTO media_assets (name, label, deleted, revision, created_at)
-            VALUES (#{name}, #{label}, 0, 1, #{createdAt})
+            INSERT INTO media_assets (name, label, deleted, revision, created_at)
+            VALUES (#{name}, #{label}, FALSE, 1, #{createdAt})
+            ON CONFLICT (name) DO NOTHING
             """)
     void register(@Param("name") String name, @Param("label") String label, @Param("createdAt") String createdAt);
 

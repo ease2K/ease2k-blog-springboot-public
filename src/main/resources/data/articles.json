@@ -6,8 +6,8 @@
         "enTitle": "How an HTTP request finds an article",
         "summary": "跟踪浏览器、Controller、Service 和 Repository 之间的调用。",
         "enSummary": "Trace a request from the browser through the controller, service, and repository.",
-        "body": "## 第一步，访问详情接口\n\n在本地执行 `curl http://127.0.0.1:8088/api/entries/spring-web-request`，观察 JSON。\n\n## 第二步，跟踪 Java 调用\n\n在 `ArticleController.entry()` 设置断点。Controller 根据路径取得文章 ID，Service 向 Repository 查询文章，找不到的 ID 返回 HTTP 404。\n\n## 第三步，对照页面\n\n访问 `/entry/spring-web-request`，查看网页源代码中的正文，再对照 React 启动后显示的内容。",
-        "enBody": "## Call the API\n\nRun `curl http://127.0.0.1:8088/api/entries/spring-web-request` locally.\n\n## Follow the Java call\n\nSet a breakpoint in `ArticleController.entry()`. The controller reads the article ID from the path and uses the service and repository to look it up. Unknown IDs return HTTP 404.",
+        "body": "## 第一步，访问详情接口\n\n在本地执行 `curl http://127.0.0.1:8089/api/entries/spring-web-request`，观察 JSON。\n\n## 第二步，跟踪 Java 调用\n\n在 `ArticleController.entry()` 设置断点。Controller 根据路径取得文章 ID，Service 向 Repository 查询文章，找不到的 ID 返回 HTTP 404。\n\n## 第三步，对照页面\n\n访问 `/entry/spring-web-request`，查看网页源代码中的正文，再对照 React 启动后显示的内容。",
+        "enBody": "## Call the API\n\nRun `curl http://127.0.0.1:8089/api/entries/spring-web-request` locally.\n\n## Follow the Java call\n\nSet a breakpoint in `ArticleController.entry()`. The controller reads the article ID from the path and uses the service and repository to look it up. Unknown IDs return HTTP 404.",
         "date": "2026-11-20",
         "visibility": "public",
         "tags": [
@@ -29,8 +29,8 @@
     {
         "id": "sqlite-drafts",
         "kind": "article",
-        "title": "SQLite 如何保存草稿",
-        "enTitle": "How SQLite stores a draft",
+        "title": "PostgreSQL 如何保存草稿",
+        "enTitle": "How PostgreSQL stores a draft",
         "summary": "用同一篇文章观察保存草稿和发布的区别。",
         "enSummary": "Use one article to see how saving a draft differs from publishing it.",
         "body": "## 在本机建立工作台\n\n按 README 为独立目录设置站主密码。在工作台修改一篇示例文章，保存草稿，再打开同一文章的公开地址。\n\n## 对照发布前后\n\n草稿暂存在工作副本中。发布后，公开接口读取新的文章版本。这时可以分别查看 `OwnerEntries` 的保存和发布方法。",
@@ -39,7 +39,7 @@
         "visibility": "public",
         "tags": [
             "Java",
-            "SQLite"
+            "PostgreSQL"
         ],
         "read": 2,
         "series": {
@@ -58,8 +58,8 @@
         "enTitle": "Building a personal blog with Spring Boot",
         "summary": "示例项目展示 Markdown 渲染、站内搜索和文章编辑。",
         "enSummary": "The example shows Markdown rendering, site search, and editing.",
-        "body": "## 项目结构\n\nReact 管理阅读界面，Spring Boot 提供页面和 REST 接口，SQLite 保存工作台数据。\n\n## 本地实验\n\n先试着修改文章摘要，再对照列表接口与详情接口响应。代码中的工作台数据目录可以独立配置。",
-        "enBody": "## Architecture\n\nReact handles the reading experience, Spring Boot serves pages and REST endpoints, and SQLite stores editor data.",
+        "body": "## 项目结构\n\nReact 管理阅读界面，Spring Boot 提供页面和 REST 接口，PostgreSQL 保存工作台数据。\n\n## 本地实验\n\n先试着修改文章摘要，再对照列表接口与详情接口响应。代码中的工作台数据目录可以独立配置。",
+        "enBody": "## Architecture\n\nReact handles the reading experience, Spring Boot serves pages and REST endpoints, and PostgreSQL stores editor data.",
         "date": "2026-11-20",
         "visibility": "public",
         "tags": [
@@ -72,7 +72,7 @@
             "stack": [
                 "Spring Boot",
                 "React",
-                "SQLite"
+                "PostgreSQL"
             ],
             "problem": "在一个项目里练习公开阅读与私有编辑。",
             "enProblem": "Practice public reading and private editing in one project.",

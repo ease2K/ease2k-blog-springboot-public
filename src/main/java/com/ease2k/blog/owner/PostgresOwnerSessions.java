@@ -20,7 +20,7 @@ import java.util.Base64;
 import java.util.HexFormat;
 
 @Service
-public class SqliteOwnerSessions implements OwnerSessions {
+public class PostgresOwnerSessions implements OwnerSessions {
 
     private static final long ATTEMPT_WINDOW = Duration.ofMinutes(15).toMillis();
     private final OwnerDatabase database;
@@ -28,7 +28,7 @@ public class SqliteOwnerSessions implements OwnerSessions {
     private final ObjectMapper mapper;
     private final AuthenticationManager authentication;
 
-    public SqliteOwnerSessions(OwnerDatabase database, ObjectMapper mapper, AuthenticationManager authentication) throws IOException {
+    public PostgresOwnerSessions(OwnerDatabase database, ObjectMapper mapper, AuthenticationManager authentication) throws IOException {
         this.database = database;
         this.sessionMapper = database.mapper(OwnerSessionMapper.class);
         this.mapper = mapper;

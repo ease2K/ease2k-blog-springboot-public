@@ -14,7 +14,10 @@ interface OwnerSessionMapper {
     @Delete("DELETE FROM attempts WHERE started <= #{cutoff} OR version <> #{version}")
     void pruneAttempts(@Param("cutoff") long cutoff, @Param("version") String version);
 
-    @Insert("INSERT OR IGNORE INTO attempts (version, started, count) VALUES (#{version}, #{now}, 0)")
+    @Insert("""
+            INSERT INTO attempts (version, started, count) VALUES (#{version}, #{now}, 0)
+            ON CONFLICT (version) DO NOTHING
+            """)
     void startAttempts(@Param("version") String version, @Param("now") long now);
 
     @Update("UPDATE attempts SET count=count+1 WHERE version=#{version} AND count < 8")

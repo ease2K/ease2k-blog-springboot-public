@@ -2,7 +2,7 @@
 set -euo pipefail
 umask 077
 
-inbox=${BLOG_EDITOR_DIRECTORY:-/var/lib/ease2k-blog-springboot/editor}/daily-note-inbox
+inbox=${BLOG_EDITOR_DIRECTORY:-/var/lib/ease2k-blog-springboot-postgresql/editor}/daily-note-inbox
 request="$inbox/request.json"
 result="$inbox/result.json"
 test -d "$inbox"

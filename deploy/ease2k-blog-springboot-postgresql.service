@@ -1,0 +1,23 @@
+[Unit]
+Description=ease2k Spring Boot Blog
+After=network.target
+
+[Service]
+Type=exec
+User=easeblog-postgres
+Group=easeblog-postgres
+WorkingDirectory=/opt/ease2k-blog-springboot-postgresql/current
+EnvironmentFile=/etc/ease2k-blog-springboot-postgresql.env
+ExecStart=/opt/jdk-27/bin/java -jar /opt/ease2k-blog-springboot-postgresql/current/blog.jar
+Restart=on-failure
+RestartSec=3s
+TimeoutStopSec=30s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=-/var/lib/ease2k-blog-springboot-postgresql/editor
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target
