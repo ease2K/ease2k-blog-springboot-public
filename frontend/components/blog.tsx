@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Home, BookOpen, Folder, Trophy, UserRound, Search, Sun, Moon, ArrowUpRight, ChevronDown, ChevronRight, ArrowLeft, Clock3, CalendarDays, Globe2, X, Code2, Palette, Database, Braces, NotebookPen, Coffee, ArrowUp, GraduationCap, Pin, LibraryBig, Rss, History } from "lucide-react";
 import Body, { preloadBody } from "@/components/article-body";
 import HitText from "@/components/hit-text";
@@ -34,6 +34,8 @@ const names: Record<string, [string, string]> = {
 const sourceRepository = "https://github.com/ease2K/ease2k-blog-springboot-public";
 const nav = [["home", Home], ["daily", NotebookPen], ["articles", BookOpen], ["series", LibraryBig], ["projects", Folder], ["competitions", Trophy], ["about", UserRound], ["changelog", History]] as const;
 const moreNav = nav.slice(4);
+const journalDay = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Shanghai", day: "2-digit" });
+const archiveMonth = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit" });
 
 function PlatformIcon({ platform }: { platform: "codeforces" | "atcoder" | "github" }) {
     return <span className={"platform-icon platform-icon-" + platform} aria-hidden="true">{platform === "github" ? <><img className="platform-day" src="/brands/github-black.svg" width="18" height="18" alt="" /><img className="platform-night" src="/brands/github-white.svg" width="18" height="18" alt="" /></> : <img src={platform === "codeforces" ? "/brands/codeforces.ico" : atcoderIcon} width="18" height="18" alt="" />}</span>;
@@ -92,12 +94,22 @@ export default function Blog({ initialPath = "/", initialData, initialEntry, ini
     const competitionGroups: Record<string, [string, string]> = { awards: ["竞赛奖项", "Competition awards"], problems: ["原创题目", "Problems I authored"], tutorials: ["竞赛相关算法", "Competition algorithms"] };
     const validCompetitionGroup = !competitionGroup || Object.hasOwn(competitionGroups, competitionGroup);
     const activeNav = active === "entry" && selected ? returnPath.startsWith("/series") ? "series" : returnPath === "/articles" ? "articles" : selected.section === "competitions" ? "competitions" : selected.kind === "daily" ? "daily" : selected.kind === "project" ? "projects" : "articles" : active === "series" ? "series" : active === "award" ? "competitions" : ["algorithms", ...technologyTopics.map(topic => topic.toLowerCase()), "cpp"].includes(active) ? "articles" : active;
-    const list = [...data.entries].sort((a, b) => b.date.localeCompare(a.date));
-    const catalog = seriesCatalog(list), currentSeries = active === "series" ? catalog.find(series => series.id === entryId(path)) : selected?.series ? catalog.find(series => series.id === selected.series?.id) : undefined;
+    const list = data.entries;
+    const catalog = useMemo(() => seriesCatalog(list), [list]);
+    const seriesId = active === "series" ? entryId(path) : selected?.series?.id;
+    const currentSeries = catalog.find(series => series.id === seriesId);
     const title = (e: EntrySummary) => lang === "en" && e.enTitle ? e.enTitle : e.title;
     const summary = (e: EntrySummary) => lang === "en" && e.enSummary ? e.enSummary : e.summary;
-    const date = (value: string, options?: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(lang === "zh" ? "zh-CN" : "en-US", { timeZone: "Asia/Shanghai", month: "2-digit", day: "2-digit", ...options }).format(new Date(value));
-    const published = (value: string) => date(value, { year: "numeric", ...(/[T ]\d{2}:\d{2}/.test(value) ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" as const } : {}) });
+    const dates = useMemo(() => {
+        const locale = lang === "zh" ? "zh-CN" : "en-US";
+        const options = { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" } as const;
+        return {
+            day: new Intl.DateTimeFormat(locale, options),
+            time: new Intl.DateTimeFormat(locale, { ...options, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }),
+            month: new Intl.DateTimeFormat(locale, { timeZone: "Asia/Shanghai", month: "short" }),
+        };
+    }, [lang]);
+    const published = (value: string) => (/[T ]\d{2}:\d{2}/.test(value) ? dates.time : dates.day).format(new Date(value));
     const link = (section: string) => section === "home" ? "/" : "/" + section;
     const load = useCallback(async () => {
         // 每次加载使用新的请求序号，重试时忽略旧请求的结果。
@@ -197,7 +209,7 @@ export default function Blog({ initialPath = "/", initialData, initialEntry, ini
     }
     function row(e: EntrySummary) {
         return <article className={"entry-row " + (e.kind === "daily" ? "journal-row" : "")} key={e.id} data-entry={e.id}>
-            {e.kind === "daily" && <div className="journal-date"><span>{new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Shanghai", day: "2-digit" }).format(new Date(e.date))}</span><small>{date(e.date, { month: "short", day: undefined })}</small></div>}
+            {e.kind === "daily" && <div className="journal-date"><span>{journalDay.format(new Date(e.date))}</span><small>{dates.month.format(new Date(e.date))}</small></div>}
             <div className="entry-text"><div className="entry-meta"><span>{e.kind === "daily" ? <NotebookPen size={12} /> : e.kind === "project" ? <Folder size={12} /> : <BookOpen size={12} />}{tagName(e.tags[0])}</span><time dateTime={e.date} title={t("发布时间（北京时间）", "Published (Beijing time)")}>{published(e.date)}</time>{e.kind !== "daily" && <span>{e.read} {t("分钟", "min")}</span>}{lang === "en" && e.hasEnglishBody === false && <span>Full text in Chinese</span>}{e.modifiedAt && <span className="entry-updated">{t("更新于", "Updated")} <time dateTime={e.modifiedAt}>{published(e.modifiedAt)}</time></span>}</div>
                 {internal("/entry/" + e.id, <><h3>{title(e)}</h3><p>{summary(e)}</p></>, "entry-title-link")}{tags(e)}</div>{internal("/entry/" + e.id, <ChevronRight size={19} />, "entry-open")}
         </article>;
@@ -218,7 +230,14 @@ export default function Blog({ initialPath = "/", initialData, initialEntry, ini
     const entryLoading = loading || entryState.id !== entryId(path) || entryState.loading;
     const neighbours = selected ? currentSeries?.chapters || list.filter(entry => entry.kind === selected.kind) : [];
     const currentIndex = neighbours.findIndex(entry => entry.id === selected?.id);
-    const related = selected ? list.filter(entry => entry.id !== selected.id).map(entry => ({ entry, score: entry.tags.map(tagKey).filter(value => selected.tags.map(tagKey).includes(value)).length })).filter(value => value.score > 0).sort((a, b) => b.score - a.score).slice(0, 3).map(value => value.entry) : [];
+    const related = useMemo(() => {
+        if (!selected) return [];
+        const tags = new Set(selected.tags.map(tagKey));
+        return list.filter(entry => entry.id !== selected.id)
+            .map(entry => ({ entry, score: entry.tags.filter(value => tags.has(tagKey(value))).length }))
+            .filter(value => value.score > 0).sort((a, b) => b.score - a.score)
+            .slice(0, 3).map(value => value.entry);
+    }, [list, selected]);
 
 
     return <div className={"site" + (active === "home" ? " site-home" : "")}>{active === "home" && <div className="home-wallpaper" aria-hidden="true" />}<a className="skip-link" href="#main">{t("跳到正文", "Skip to content")}</a>
@@ -254,8 +273,8 @@ export default function Blog({ initialPath = "/", initialData, initialEntry, ini
                 <div className="page-heading"><div><span className="page-kicker">{t("个人手记", "Personal notes")}</span><h1>{name(active)}</h1><p>{active === "daily" ? t("收集生活里的片段，也留住偶然的想法。", "Small moments, passing thoughts, and things worth keeping.") : active === "articles" ? t("汇总日常、学习与项目中的所有文章。", "All my writing, from everyday notes to learning and projects.") : t("从一个问题开始，慢慢整理成自己的理解。", "Questions, practice, and a growing understanding.")}</p></div></div>
                 {active === "projects" && profileButtons("github")}
                 <nav className="topic-nav" aria-label={t("技术主题", "Technology topics")}>{["articles", "algorithms", "cpp", ...technologyTopics.map(topic => topic.toLowerCase())].map(key => internal("/" + key, <>{name(key)}<small>{list.filter(entry => inSection(entry, key)).length}</small></>, "topic-link" + (active === key ? " active" : "")))}</nav>
-                <div className="filter-bar"><div className="filter-chips">{["all", ...new Set(list.filter(e => inSection(e, active)).flatMap(e => e.tags.map(tagKey)))].map(value => <button key={value} className={tag === value ? "selected" : ""} aria-pressed={tag === value} onClick={() => setTag(value)}>{value === "all" ? t("全部", "All") : tagName(value)}</button>)}</div>{active === "daily" && <select aria-label={t("按月份筛选", "Filter by month")} value={month} onChange={e => setMonth(e.target.value)}><option value="all">{t("所有月份", "All months")}</option>{[...new Set(list.filter(e => e.kind === "daily").map(e => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit" }).format(new Date(e.date))))].map(value => <option key={value}>{value}</option>)}</select>}</div>
-                {(() => { const items = list.filter(e => inSection(e, active) && (tag === "all" || e.tags.some(value => tagKey(value) === tag)) && (month === "all" || new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit" }).format(new Date(e.date)) === month)); return loading ? <div className="loading-state" role="status">{t("正在加载记录…", "Loading entries…")}</div> : !data.ready ? null : items.length ? <div className={active === "projects" ? "project-grid" : "entry-list full-list"}>{active === "projects" ? items.map(entry => <ProjectCard key={entry.id} entry={entry} lang={lang} open={go} />) : items.map(row)}</div> : <div className="empty-state"><NotebookPen /><h2>{t("这里还没有记录", "Nothing here yet")}</h2><p>{t("换个筛选条件，或稍后再来看看。", "Try another filter, or check back later.")}</p><button className="secondary-button" onClick={() => { setTag("all"); setMonth("all"); }}>{t("重置筛选", "Reset filters")}</button></div>; })()}
+                <div className="filter-bar"><div className="filter-chips">{["all", ...new Set(list.filter(e => inSection(e, active)).flatMap(e => e.tags.map(tagKey)))].map(value => <button key={value} className={tag === value ? "selected" : ""} aria-pressed={tag === value} onClick={() => setTag(value)}>{value === "all" ? t("全部", "All") : tagName(value)}</button>)}</div>{active === "daily" && <select aria-label={t("按月份筛选", "Filter by month")} value={month} onChange={e => setMonth(e.target.value)}><option value="all">{t("所有月份", "All months")}</option>{[...new Set(list.filter(e => e.kind === "daily").map(e => archiveMonth.format(new Date(e.date))))].map(value => <option key={value}>{value}</option>)}</select>}</div>
+                {(() => { const items = list.filter(e => inSection(e, active) && (tag === "all" || e.tags.some(value => tagKey(value) === tag)) && (month === "all" || archiveMonth.format(new Date(e.date)) === month)); return loading ? <div className="loading-state" role="status">{t("正在加载记录…", "Loading entries…")}</div> : !data.ready ? null : items.length ? <div className={active === "projects" ? "project-grid" : "entry-list full-list"}>{active === "projects" ? items.map(entry => <ProjectCard key={entry.id} entry={entry} lang={lang} open={go} />) : items.map(row)}</div> : <div className="empty-state"><NotebookPen /><h2>{t("这里还没有记录", "Nothing here yet")}</h2><p>{t("换个筛选条件，或稍后再来看看。", "Try another filter, or check back later.")}</p><button className="secondary-button" onClick={() => { setTag("all"); setMonth("all"); }}>{t("重置筛选", "Reset filters")}</button></div>; })()}
             </>}
 
             {active === "subscribe" && <Subscriptions lang={lang} series={catalog} />}

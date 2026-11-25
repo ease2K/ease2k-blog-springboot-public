@@ -6,14 +6,18 @@ import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 
 @Service
 public class ArticleServiceImpl implements ArticleService {
+
+    private static final Pattern CODE_BLOCK = Pattern.compile("(?s)```.*?```");
+    private static final Pattern MARKDOWN_MARKS = Pattern.compile("[#*_`~>|]");
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
     private final ArticleRepository repository;
     private final ObjectMapper mapper;
@@ -58,30 +62,24 @@ public class ArticleServiceImpl implements ArticleService {
             return List.of();
         }
         String keyword = value.substring(0, Math.min(200, value.length()));
-        ArticleRepository.Snapshot snapshot = repository.snapshot();
-        Map<String, ObjectNode> summaries = index(snapshot).byId();
-        return snapshot.entries().stream()
-                .map(article -> searchEntry(article, keyword, summaries.get(article.id())))
+        return index(repository.snapshot()).searchEntries().stream()
+                .map(entry -> searchEntry(entry, keyword))
                 .flatMap(Optional::stream)
                 .limit(30)
                 .toList();
     }
 
-    private Optional<ObjectNode> searchEntry(Article article, String keyword, ObjectNode summary) {
-        // 字段顺序决定同一篇文章采用哪个摘录，也决定命中英文时是否切换阅读语言。
-        String[] fields = {article.title(), article.enTitle(), article.summary(), article.enSummary(),
-                article.body(), article.enBody(), String.join(" ", article.tags())};
-        for (int i = 0; i < fields.length; i++) {
-            String text = fields[i];
-            if (!text.toLowerCase(Locale.ROOT).contains(keyword)) {
+    private Optional<ObjectNode> searchEntry(SearchEntry entry, String keyword) {
+        for (int i = 0; i < entry.fields().size(); i++) {
+            if (!entry.lowercaseFields().get(i).contains(keyword)) {
                 continue;
             }
             // 摘录和语言提示取决于当前查询，只写入副本，避免串到列表或其他搜索。
-            ObjectNode result = summary.deepCopy();
+            ObjectNode result = entry.summary().deepCopy();
             if (i == 1 || i == 3 || i == 5) {
                 result.put("searchLanguage", "en");
             }
-            result.put("searchSnippet", i < 2 ? result.path("summary").asString() : snippet(text, keyword));
+            result.put("searchSnippet", i < 2 ? result.path("summary").asString() : snippet(entry.fields().get(i), keyword));
             return Optional.of(result);
         }
         return Optional.empty();
@@ -93,10 +91,18 @@ public class ArticleServiceImpl implements ArticleService {
         synchronized (this) {
             existing = index;
             if (existing != null && existing.version() == snapshot.version()) return existing;
-            Map<String, ObjectNode> summaries = snapshot.entries().stream().collect(Collectors.toUnmodifiableMap(
-                    Article::id, article -> indexEntry(mapper, article)));
-            Index updated = new Index(snapshot.version(), snapshot.entries().stream()
-                    .map(article -> summaries.get(article.id())).toList(), summaries);
+            List<ObjectNode> summaries = new ArrayList<>(snapshot.entries().size());
+            List<SearchEntry> searchEntries = new ArrayList<>(snapshot.entries().size());
+            for (Article article : snapshot.entries()) {
+                ObjectNode summary = indexEntry(mapper, article);
+                // 字段顺序决定摘录来源和语言。随发布快照统一更新大小写索引。
+                List<String> fields = List.of(article.title(), article.enTitle(), article.summary(), article.enSummary(),
+                        article.body(), article.enBody(), String.join(" ", article.tags()));
+                summaries.add(summary);
+                searchEntries.add(new SearchEntry(summary, fields, fields.stream()
+                        .map(text -> text.toLowerCase(Locale.ROOT)).toList()));
+            }
+            Index updated = new Index(snapshot.version(), List.copyOf(summaries), List.copyOf(searchEntries));
             // 并发中的旧请求仍可以完成，旧快照不能覆盖已经生效的新缓存。
             if (existing == null || updated.version() > existing.version()) index = updated;
             return updated;
@@ -117,14 +123,18 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
     private static String snippet(String text, String keyword) {
-        String plain = text.replaceAll("(?s)```.*?```", " ")
-                .replaceAll("[#*_`~>|]", " ").replaceAll("\\s+", " ").strip();
+        String plain = CODE_BLOCK.matcher(text).replaceAll(" ");
+        plain = MARKDOWN_MARKS.matcher(plain).replaceAll(" ");
+        plain = WHITESPACE.matcher(plain).replaceAll(" ").strip();
         int match = plain.toLowerCase(Locale.ROOT).indexOf(keyword);
         int start = Math.max(0, match - 45);
         int end = Math.min(plain.length(), start + 140);
         return (start > 0 ? "…" : "") + plain.substring(start, end) + (end < plain.length() ? "…" : "");
     }
 
-    private record Index(long version, List<ObjectNode> entries, Map<String, ObjectNode> byId) {
+    private record SearchEntry(ObjectNode summary, List<String> fields, List<String> lowercaseFields) {
+    }
+
+    private record Index(long version, List<ObjectNode> entries, List<SearchEntry> searchEntries) {
     }
 }

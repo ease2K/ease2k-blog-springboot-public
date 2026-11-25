@@ -6,6 +6,15 @@ export { changelogPath, changelogCopy } from "./changelog-meta";
 export const releases: Release[] = [
     {
         date: "2026-11-25",
+        title: { zh: "加快站内搜索和文章列表", en: "Faster site search and article lists" },
+        changes: [
+            { zh: "文章发布或撤下后同步更新搜索索引，搜索时省去反复转换中英文标题、正文和标签大小写的开销。", en: "The search index updates when articles are published or withdrawn and reuses case-normalized titles, text, and tags for each query." },
+            { zh: "公开快照省去工作台专用的修订字段和历史发布时间查询。", en: "Public snapshots skip workspace revision metadata and history lookups for first publication dates." },
+            { zh: "文章列表直接使用按发布时间排好的结果，切换筛选和阅读时复用日期格式及专栏数据。", en: "Article lists use publication order from the server and reuse date formatters and series data as readers filter or navigate." },
+        ],
+    },
+    {
+        date: "2026-11-25",
         title: { zh: "博客数据迁移到 PostgreSQL", en: "Moved blog data to PostgreSQL" },
         changes: [
             { zh: "文章、草稿、修订历史、专栏和图片记录迁入 PostgreSQL，原有文章链接继续可用。", en: "Articles, drafts, revision history, series, and image records moved to PostgreSQL. Existing article links still work." },
