@@ -13,7 +13,9 @@ let initial: { initialData?: View; initialEntry?: Entry | null; initialLang?: "z
 const bootstrap = document.getElementById("blog-bootstrap");
 try { if (bootstrap?.textContent) initial = JSON.parse(bootstrap.textContent); } catch {}
 const initialEntry = initial.initialEntry || undefined;
-const initialLang = initial.initialLang || (/^zh(?:-|$)/i.test(navigator.language) ? "zh" : "en");
+const requestedLang = new URLSearchParams(window.location.search).get("lang");
+const initialLang = requestedLang === "zh" || requestedLang === "en"
+    ? requestedLang : initial.initialLang ?? (/^zh(?:-|$)/i.test(navigator.language) ? "zh" : "en");
 const app = <Blog initialPath={window.location.pathname}
     initialData={initial.initialData} initialEntry={initialEntry} initialLang={initialLang} ownerEnabled={initial.ownerEnabled} />;
 const root = document.getElementById("root")!;

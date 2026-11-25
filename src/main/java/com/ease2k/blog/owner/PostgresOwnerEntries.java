@@ -64,18 +64,10 @@ public class PostgresOwnerEntries implements OwnerEntries {
         Map<String, ObjectNode> series = new LinkedHashMap<>();
         for (var row : seriesMapper.series()) {
             ObjectNode item = object(row.payload());
-            item.remove(List.of("revision", "updatedAt"));
             series.put(item.path("id").asString(), item);
         }
         for (ObjectNode entry : rows.values()) {
-            JsonNode current = entry.path("series");
-            ObjectNode metadata = series.get(current.path("id").asString());
-            if (metadata == null) continue;
-            int index = chapterIndex(metadata.path("chapterOrder"), entry.path("id").asString());
-            ObjectNode merged = metadata.deepCopy();
-            merged.remove("chapterOrder");
-            merged.put("order", index < 0 ? current.path("order").asInt(1) : index + 1);
-            entry.set("series", merged);
+            mergeSeries(entry, series.get(entry.path("series").path("id").asString()));
         }
         return new ArrayList<>(rows.values());
     }
@@ -176,13 +168,14 @@ public class PostgresOwnerEntries implements OwnerEntries {
             throw OwnerProblem.conflict("文章已在其他窗口修改或删除，请重新加载。");
         }
         String now = Instant.now().toString();
-        String first = previous == null ? null : publishedAt(previous);
+        String previousPublication = previous == null ? null : publishedAt(previous);
         ObjectNode entry = remove ? previous.deepCopy() : input;
         if (!id.equals(entry.path("id").asString())) throw OwnerProblem.bad("文章 ID 不可更改。");
-        if (!remove && first == null && "public".equals(entry.path("visibility").asString())) first = now;
-        if (first == null) entry.putNull("publishedAt");
-        else entry.put("publishedAt", first);
+        boolean publicEntry = "public".equals(entry.path("visibility").asString());
+        String first = !remove && previousPublication == null && publicEntry ? now : previousPublication;
+        entry.put("publishedAt", first);
 
+        ObjectNode series = null;
         if (!remove) {
             entry.put("date", first != null ? first : previous == null ? now : previous.path("date").asString(now));
             String summary = entry.path("summary").asString().strip();
@@ -193,8 +186,7 @@ public class PostgresOwnerEntries implements OwnerEntries {
                 entry.put("enSummary", excerpt(entry.path("enBody").asString()));
             }
             entry.put("read", readingMinutes(entry.path("body").asString()));
-            if (recordUpdate && previous != null && publishedAt(previous) != null
-                    && "public".equals(entry.path("visibility").asString())) {
+            if (recordUpdate && previousPublication != null && publicEntry) {
                 if (entry.path("updateNote").asString().isBlank()) throw OwnerProblem.bad("请填写实质更新说明。");
                 entry.put("modifiedAt", now);
             } else {
@@ -209,7 +201,7 @@ public class PostgresOwnerEntries implements OwnerEntries {
                 }
             }
             checkMedia(entry);
-            attachSeries(entry, now);
+            series = attachSeries(entry, now);
         }
 
         int next = current + 1;
@@ -224,8 +216,9 @@ public class PostgresOwnerEntries implements OwnerEntries {
                 entry.path("visibility").asString(null), entry.path("date").asString(null));
         entryMapper.pruneHistory(id, next - 29);
         if (!mediaOnly) entryMapper.deleteDraft(id);
-        if (remove) return view(entry, next, now);
-        return all().stream().filter(value -> id.equals(value.path("id").asString())).findFirst().orElseThrow();
+        ObjectNode result = view(entry, next, now);
+        mergeSeries(result, series);
+        return result;
     }
 
     private ObjectNode object(String text) {
@@ -282,18 +275,18 @@ public class PostgresOwnerEntries implements OwnerEntries {
         });
     }
 
-    private void attachSeries(ObjectNode entry, String now) {
-        if (!(entry.path("series") instanceof ObjectNode series)) return;
+    private ObjectNode attachSeries(ObjectNode entry, String now) {
+        if (!(entry.path("series") instanceof ObjectNode series)) return null;
         String id = series.path("id").asString();
         String chapter = entry.path("id").asString();
         String payload = seriesMapper.payload(id);
         if (payload == null) {
-            if (series.path("title").asString().isBlank()) return;
+            if (series.path("title").asString().isBlank()) return null;
             ObjectNode metadata = series.deepCopy();
             metadata.remove("order");
             metadata.putArray("chapterOrder").add(chapter);
             seriesMapper.insertSeries(id, json(metadata), now);
-            return;
+            return metadata;
         }
         ObjectNode current = object(payload);
         JsonNode stored = current.path("chapterOrder");
@@ -308,6 +301,16 @@ public class PostgresOwnerEntries implements OwnerEntries {
             order.forEach(updated::add);
             seriesMapper.reviseSeries(id, json(current), now);
         }
+        return current;
+    }
+
+    private static void mergeSeries(ObjectNode entry, ObjectNode metadata) {
+        if (metadata == null) return;
+        int index = chapterIndex(metadata.path("chapterOrder"), entry.path("id").asString());
+        ObjectNode merged = metadata.deepCopy();
+        merged.remove(List.of("chapterOrder", "revision", "updatedAt"));
+        merged.put("order", index < 0 ? entry.path("series").path("order").asInt(1) : index + 1);
+        entry.set("series", merged);
     }
 
     static int chapterIndex(JsonNode order, String chapter) {

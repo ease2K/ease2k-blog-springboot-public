@@ -13,7 +13,7 @@
 
     <groupId>com.ease2k</groupId>
     <artifactId>ease2k-blog-springboot-postgresql</artifactId>
-    <version>0.1.5</version>
+    <version>0.1.7</version>
 
     <properties>
         <java.version>27</java.version>

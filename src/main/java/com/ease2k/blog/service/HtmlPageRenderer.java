@@ -60,15 +60,17 @@ public class HtmlPageRenderer implements PageRenderer {
     public String render(HttpServletRequest request, Article article) {
         String path = request.getRequestURI();
         String language = request.getParameter("lang");
+        String acceptedLanguage = request.getHeader("Accept-Language");
         boolean english = "en".equals(language) || !"zh".equals(language)
-                && request.getHeader("Accept-Language") != null
-                && !request.getHeader("Accept-Language").toLowerCase(Locale.ROOT).startsWith("zh");
+                && acceptedLanguage != null && !acceptedLanguage.toLowerCase(Locale.ROOT).startsWith("zh");
         String lang = english ? "en" : "zh";
         String title = article == null ? sectionTitle(path, english) : articleTitle(article, english);
         String description = english ? DESCRIPTION_EN : DESCRIPTION_ZH;
+        String summary = "";
         if (article != null) {
-            String summary = english && hasText(article.enSummary()) ? article.enSummary() : article.summary();
-            if (hasText(summary) && !"-".equals(summary.strip()) && !"—".equals(summary.strip())) {
+            summary = english && !article.enSummary().isBlank() ? article.enSummary() : article.summary();
+            String trimmed = summary.strip();
+            if (!trimmed.isEmpty() && !"-".equals(trimmed) && !"—".equals(trimmed)) {
                 description = summary;
             }
         }
@@ -91,7 +93,7 @@ public class HtmlPageRenderer implements PageRenderer {
 
         String initial = "<script id=\"blog-bootstrap\" type=\"application/json\">"
                 + json(new Bootstrap(new InitialData(articles.list(), true), article, lang, owner.enabled())) + "</script>";
-        String body = "<div id=\"root\">" + initialContent(path, article, title, english) + "</div>" + initial;
+        String body = "<div id=\"root\">" + initialContent(path, article, title, summary, english) + "</div>" + initial;
         String document = site.production() ? template.replace(NOINDEX, "") : template;
         return document
                 .replace("<html lang=\"zh-CN\">", "<html lang=\"" + (english ? "en" : "zh-CN") + "\">")
@@ -100,16 +102,15 @@ public class HtmlPageRenderer implements PageRenderer {
                 .replace(ROOT, body);
     }
 
-    private String initialContent(String path, Article article, String title, boolean english) {
+    private String initialContent(String path, Article article, String title, String summary, boolean english) {
         if (article != null) {
-            String summary = english && hasText(article.enSummary()) ? article.enSummary() : article.summary();
-            BodyKey key = new BodyKey(article.id(), english && hasText(article.enBody()));
+            BodyKey key = new BodyKey(article.id(), english && !article.enBody().isBlank());
             String text = key.english() ? article.enBody() : article.body();
             // 同一地址重新发布后以新正文重建缓存。
             String body = renderedBodies.compute(key, (unused, cached) -> cached != null && cached.source().equals(text)
                     ? cached : new RenderedBody(text, html.render(markdown.parse(text.replaceFirst("^# [^\\r\\n]+\\R+", ""))))).html();
             return "<main class=\"wrap main-layout\"><article class=\"detail\"><h1>" + escaped(title) + "</h1>"
-                    + (hasText(summary) ? "<p class=\"detail-summary\">" + escaped(summary) + "</p>" : "")
+                    + (!summary.isBlank() ? "<p class=\"detail-summary\">" + escaped(summary) + "</p>" : "")
                     + "<div class=\"prose\">" + body + "</div></article></main>";
         }
         if ("/".equals(path) || "/articles".equals(path)) {
@@ -131,7 +132,7 @@ public class HtmlPageRenderer implements PageRenderer {
     }
 
     private static String articleTitle(Article article, boolean english) {
-        return english && hasText(article.enTitle()) ? article.enTitle() : article.title();
+        return english && !article.enTitle().isBlank() ? article.enTitle() : article.title();
     }
 
     private static String sectionTitle(String path, boolean english) {
@@ -150,10 +151,6 @@ public class HtmlPageRenderer implements PageRenderer {
                 yield english ? "Personal notes" : "个人手记";
             }
         };
-    }
-
-    private static boolean hasText(String value) {
-        return value != null && !value.isBlank();
     }
 
     private static String escaped(String value) {
