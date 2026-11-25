@@ -6,6 +6,14 @@ export { changelogPath, changelogCopy } from "./changelog-meta";
 export const releases: Release[] = [
     {
         date: "2026-11-25",
+        title: { zh: "简化文章保存与页面初始化", en: "Simplified article saves and page initialization" },
+        changes: [
+            { zh: "站主保存文章时直接返回该篇文章和专栏信息，复用首次发布时间。", en: "Saving returns the article and its series information directly and reuses its first publication date." },
+            { zh: "文章初始页面复用同一份摘要，前端在挂载前确定阅读语言。", en: "The initial article page reuses one summary, and the browser selects the reading language before mounting the app." },
+        ],
+    },
+    {
+        date: "2026-11-25",
         title: { zh: "加快站内搜索和文章列表", en: "Faster site search and article lists" },
         changes: [
             { zh: "文章发布或撤下后同步更新搜索索引，搜索时省去反复转换中英文标题、正文和标签大小写的开销。", en: "The search index updates when articles are published or withdrawn and reuses case-normalized titles, text, and tags for each query." },
