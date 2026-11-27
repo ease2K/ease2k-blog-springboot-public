@@ -6,6 +6,13 @@ export { changelogPath, changelogCopy } from "./changelog-meta";
 export const releases: Release[] = [
     {
         date: "2026-11-27",
+        title: { zh: "更新个人介绍", en: "Updated the personal bio" },
+        changes: [
+            { zh: "更新「关于我」的中英文自我介绍。", en: "Updated the Chinese and English bios on the About page." },
+        ],
+    },
+    {
+        date: "2026-11-27",
         title: { zh: "首页与文章页改版", en: "Redesigned homepage and article pages" },
         changes: [
             { zh: "首页换上山峦封面。精选阅读改为项目记录，旁边列出常用的技术栈。", en: "The homepage has a new mountain cover. It features project notes alongside the tech stack." },
