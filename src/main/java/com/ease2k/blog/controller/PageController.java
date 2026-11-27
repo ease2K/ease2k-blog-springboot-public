@@ -27,7 +27,7 @@ public class PageController {
     }
 
     @GetMapping(value = {"/", "/daily", "/articles", "/projects", "/algorithms", "/cpp", "/java", "/mysql",
-            "/html", "/css", "/javascript", "/about", "/series", "/subscribe", "/changelog",
+            "/html", "/css", "/javascript", "/about", "/subscribe", "/changelog",
             "/competitions", "/competitions/awards", "/competitions/problems", "/competitions/tutorials"},
             produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> section(HttpServletRequest request) {
@@ -38,14 +38,6 @@ public class PageController {
     public ResponseEntity<String> article(@PathVariable String id, HttpServletRequest request) {
         Article article = articles.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         return html(request, article);
-    }
-
-    @GetMapping(value = "/series/{id}", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> series(@PathVariable String id, HttpServletRequest request) {
-        if (!articles.hasSeries(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        return html(request, null);
     }
 
     @GetMapping(value = "/award/{id}", produces = MediaType.TEXT_HTML_VALUE)

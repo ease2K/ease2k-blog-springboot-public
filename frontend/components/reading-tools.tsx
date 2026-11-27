@@ -3,14 +3,14 @@ import { BookOpen, Check } from "lucide-react";
 import type { Entry } from "@/lib/content";
 import type { ReadingRecord } from "@/lib/reading";
 
-export default function ReadingTools({ entry, record, lang, available, remember }: { entry: Entry; record?: ReadingRecord; lang: "zh" | "en"; available: boolean; remember: (id: string, seriesId: string, change?: Partial<ReadingRecord>) => void }) {
+export default function ReadingTools({ entry, record, lang, available, remember }: { entry: Entry; record?: ReadingRecord; lang: "zh" | "en"; available: boolean; remember: (id: string, change?: Partial<ReadingRecord>) => void }) {
     const t = (zh: string, en: string) => lang === "zh" ? zh : en;
-    const initial = useRef(record?.seriesId === (entry.series?.id || "") ? record : undefined), actions = useRef<{ resume: () => boolean; restart: () => void }>({ resume: () => false, restart: () => {} });
+    const initial = useRef(record), actions = useRef<{ resume: () => boolean; restart: () => void }>({ resume: () => false, restart: () => {} });
     const [tracking, setTracking] = useState(false);
     useEffect(() => {
         const article = document.querySelector<HTMLElement>(".detail");
         if (!article) return;
-        const seriesId = entry.series?.id || "", saved = initial.current;
+        const saved = initial.current;
         let body: HTMLElement | null = null, initialized = false, starting = false, disposed = false, interacted = false, completed = !!saved?.completed, frame = 0;
         const restoration = window.history.scrollRestoration;
         window.history.scrollRestoration = "manual";
@@ -27,7 +27,7 @@ export default function ReadingTools({ entry, record, lang, available, remember 
         };
         function flush() {
             if (timer) clearTimeout(timer); timer = undefined;
-            if (pending) { remember(entry.id, seriesId, pending); pending = undefined; }
+            if (pending) { remember(entry.id, pending); pending = undefined; }
         }
         function checkCompletion() {
             if (completion) clearTimeout(completion); completion = undefined;
@@ -79,7 +79,7 @@ export default function ReadingTools({ entry, record, lang, available, remember 
             if (!body || !body.getBoundingClientRect().height) return;
             completed = false; visible = 0; since = document.hidden ? 0 : performance.now();
             initial.current = undefined;
-            remember(entry.id, seriesId, { completed: false, position: 0, progress: 0, block: 0, blockText: "", offset: 0, heading: "", headingText: "", lang });
+            remember(entry.id, { completed: false, position: 0, progress: 0, block: 0, blockText: "", offset: 0, heading: "", headingText: "", lang });
             window.scrollTo({ top: Math.max(0, window.scrollY + body.getBoundingClientRect().top - line()), behavior: "instant" });
             sample(); flush();
         } };
@@ -122,7 +122,7 @@ export default function ReadingTools({ entry, record, lang, available, remember 
             window.removeEventListener("scroll", schedule); window.removeEventListener("pagehide", saveNow); window.removeEventListener("ease2k:reading-leave", saveNow); window.removeEventListener("pointerdown", saveNow, { capture: true }); document.removeEventListener("visibilitychange", visibility);
             for (const event of ["wheel", "touchstart", "keydown"]) window.removeEventListener(event, interact);
         };
-    }, [entry.id, entry.series?.id, lang, remember]);
+    }, [entry.id, lang, remember]);
     const percent = record?.completed ? 100 : Math.round((record?.progress || 0) * 100);
     return <div className="reading-tools" aria-busy={!tracking}>
         <progress value={percent} max={100} aria-label={t("文章阅读进度", "Article reading progress")} />

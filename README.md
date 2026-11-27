@@ -2,7 +2,7 @@
 
 这是 ease2k 博客的 Spring Boot 公开版，包含公开阅读站点和站主工作台。后端使用 Java 27、Spring Boot 4.1.2 和 Spring MVC，前端沿用原博客的 React、TypeScript 和样式，由 Vite 构建。Spring Boot 在同一个端口提供 HTML、前端资源、JSON API 和 RSS。
 
-仓库自带三篇可直接运行的示例，覆盖 HTTP 请求、编辑草稿和博客项目。公开站点支持文章、专栏、中英文阅读、全文搜索和 RSS。设置站主密码后，可以登录工作台编辑 Markdown、保存草稿、发布、查看历史版本、管理专栏与图片。工作台通过 MyBatis 读写 PostgreSQL，旧 SQLite 数据可以通过脚本导入。
+仓库自带三篇可直接运行的示例，覆盖 HTTP 请求、编辑草稿和博客项目。公开站点支持文章、每日小记、项目、竞赛记录、中英文阅读、全文搜索和 RSS。设置站主密码后，可以登录工作台编辑 Markdown、保存草稿、发布、查看历史版本、管理专栏与图片。工作台通过 MyBatis 读写 PostgreSQL，旧 SQLite 数据可以通过脚本导入。
 
 ## 本地启动
 
@@ -94,14 +94,14 @@ ArticleController.entry()
 
 | 路径 | 内容 |
 | --- | --- |
-| `/`、`/articles`、`/daily`、`/series`、`/competitions` | 公开页面入口 |
+| `/`、`/articles`、`/daily`、`/projects`、`/competitions` | 公开页面入口 |
 | `/entry/{id}` | 含初始正文的文章页面 |
 | `/api/index` | `{ entries, ready }`，用于公开列表的文章摘要 |
 | `/api/entries/{id}` | `{ entry }`，含 Markdown 正文的文章详情 |
 | `/api/search?q=关键词` | `{ entries }`，空查询返回空数组 |
 | `/api/exports/articles` | `{ version, entries, ready }`，导出完整公开文章。旧地址 `/api/blog` 返回 308 跳转 |
 | `/api/ratings` | Codeforces 与 AtCoder 的 Rating 和比赛历史 |
-| `/feed.xml`、`/feed/technical.xml`、`/feed/series/{id}.xml` | 全站、技术文章和指定专栏 RSS，每份最多 50 项 |
+| `/feed.xml`、`/feed/technical.xml` | 全站和技术文章 RSS，每份最多 50 项 |
 | `/sitemap.xml`、`/robots.txt` | 搜索引擎索引配置 |
 | `/media/{name}` | 公开内容图片 |
 | `/healthz` | 运行检查，返回 `{"status":"UP"}` |

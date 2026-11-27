@@ -16,8 +16,6 @@ public interface ArticleService {
 
     List<Article> articlesForFeed();
 
-    boolean hasSeries(String id);
-
     boolean hasAward(String id);
 
     /** 按发布时间从新到旧返回最多 30 条命中摘要。空查询返回空列表。 */

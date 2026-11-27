@@ -5,6 +5,7 @@ import type { Entry } from "./lib/content";
 import "./styles/globals.css";
 import "./styles/corners.css";
 import "./styles/reading.css";
+import "./styles/journal.css";
 import { smoothCorners } from "./lib/corners";
 
 smoothCorners();
