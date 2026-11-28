@@ -59,14 +59,14 @@ public class SnapshotArticleRepository implements ArticleRepository {
             Set<String> images = new HashSet<>();
             for (ObjectNode row : source) {
                 ObjectNode canonical = row.deepCopy();
-                canonical.remove(List.of("revision", "updatedAt", "publishedAt"));
+                canonical.remove(List.of("revision", "updatedAt", "publishedAt", "series"));
                 for (String key : List.of("enTitle", "summary", "enSummary", "enBody")) {
                     if (!canonical.hasNonNull(key)) canonical.put(key, "");
                 }
                 Article article = mapper.treeToValue(canonical, Article.class);
                 validate(article);
                 entries.add(article);
-                for (String field : List.of("body", "enBody", "playground", "project", "series")) {
+                for (String field : List.of("body", "enBody", "playground", "project")) {
                     JsonNode value = canonical.path(field);
                     String text = value.isTextual() ? value.asString() : mapper.writeValueAsString(value);
                     ArticleMedia.referencedImageNames(text).forEach(images::add);
@@ -108,9 +108,5 @@ public class SnapshotArticleRepository implements ArticleRepository {
         }
         ArticleDates.parse(article.date());
         if (article.modifiedAt() != null) ArticleDates.parse(article.modifiedAt());
-        if (article.series() != null && (article.series().id() == null
-                || !article.series().id().matches("[A-Za-z0-9][A-Za-z0-9_-]{0,99}"))) {
-            throw new IllegalArgumentException("专栏 ID 无效: " + article.id());
-        }
     }
 }

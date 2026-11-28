@@ -4,11 +4,8 @@ import com.ease2k.blog.config.BlogSite;
 import com.ease2k.blog.model.Article;
 import com.ease2k.blog.model.ArticleDates;
 import com.ease2k.blog.service.ArticleService;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -42,16 +39,6 @@ public class FeedController {
         List<Article> articles = articleService.articlesForFeed().stream()
                 .filter(article -> !"daily".equals(article.kind())).toList();
         return feed("ease2k · 技术文章", articles);
-    }
-
-    @GetMapping(value = "/feed/series/{id}.xml", produces = RSS)
-    public String series(@PathVariable String id) throws XMLStreamException {
-        List<Article> articles = articleService.articlesForFeed().stream()
-                .filter(article -> article.series() != null && id.equals(article.series().id())).toList();
-        if (articles.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        return feed("ease2k · " + articles.getFirst().series().title(), articles);
     }
 
     private String feed(String title, List<Article> articles) throws XMLStreamException {

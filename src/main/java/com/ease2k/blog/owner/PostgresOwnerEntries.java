@@ -102,6 +102,7 @@ public class PostgresOwnerEntries implements OwnerEntries {
     }
 
     @Override
+    @OwnerOperation("save")
     public ObjectNode write(String id, JsonNode input) {
         int revision = OwnerInput.revision(input, "revision");
         boolean create = OwnerInput.flag(input, "create"), recordUpdate = OwnerInput.flag(input, "recordUpdate");
@@ -110,12 +111,14 @@ public class PostgresOwnerEntries implements OwnerEntries {
     }
 
     @Override
+    @OwnerOperation("trash")
     public void trash(String id, JsonNode input) {
         int revision = OwnerInput.revision(input, "revision");
         database.transaction(true, () -> save(id, null, revision, false, false, true, false, false));
     }
 
     @Override
+    @OwnerOperation("restore")
     public ObjectNode restore(String id, JsonNode input) {
         int revision = OwnerInput.revision(input, "revision");
         return database.transaction(true, () -> {

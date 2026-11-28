@@ -15,6 +15,7 @@ import tools.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -26,8 +27,8 @@ public class HtmlPageRenderer implements PageRenderer {
     private static final String ROOT = "<div id=\"root\"></div>";
     private static final String NOINDEX = "<meta name=\"robots\" content=\"noindex\">";
     private static final String TEMPLATE_TITLE = "<title>eAs1nGG-_- / ease2k</title>";
-    private static final String DESCRIPTION_ZH = "记录日常，分享算法、C++、Java、MySQL、HTML、CSS 与 JavaScript 的学习和实践。";
-    private static final String DESCRIPTION_EN = "Personal notes on algorithms, programming, and everyday life.";
+    private static final String DESCRIPTION_ZH = "记录 Java 后端开发、Spring Boot 项目、数据库和个人博客的实践。";
+    private static final String DESCRIPTION_EN = "Project notes on Java backend development, Spring Boot, databases, and building a personal blog.";
 
     private final BlogSite site;
     private final ArticleService articles;
@@ -113,9 +114,14 @@ public class HtmlPageRenderer implements PageRenderer {
                     + (!summary.isBlank() ? "<p class=\"detail-summary\">" + escaped(summary) + "</p>" : "")
                     + "<div class=\"prose\">" + body + "</div></article></main>";
         }
-        if ("/".equals(path) || "/articles".equals(path)) {
+        boolean home = "/".equals(path);
+        boolean projects = "/projects".equals(path);
+        if (home || projects || "/articles".equals(path)) {
             StringBuilder links = new StringBuilder();
-            articles.articlesForFeed().stream().limit(8).forEach(entry -> links.append("<li><a href=\"/entry/")
+            var entries = articles.articlesForFeed().stream();
+            if (home || projects) entries = entries.filter(entry -> "project".equals(entry.kind()));
+            if (home) entries = entries.sorted(Comparator.comparing((Article entry) -> Boolean.TRUE.equals(entry.featured())).reversed());
+            entries.limit(home ? 3 : 8).forEach(entry -> links.append("<li><a href=\"/entry/")
                     .append(entry.id()).append("\">").append(escaped(articleTitle(entry, english))).append("</a></li>"));
             return "<main class=\"wrap\"><h1>" + escaped(title) + "</h1><ul>" + links + "</ul></main>";
         }
@@ -145,7 +151,6 @@ public class HtmlPageRenderer implements PageRenderer {
             case "/subscribe" -> english ? "Subscribe" : "订阅更新";
             case "/changelog" -> english ? "Changelog" : "更新日志";
             default -> {
-                if (path.startsWith("/series")) yield english ? "Learning series" : "学习专栏";
                 if (path.startsWith("/competitions") || path.startsWith("/award/"))
                     yield english ? "Contests" : "竞赛";
                 yield english ? "Personal notes" : "个人手记";

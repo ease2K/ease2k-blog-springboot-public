@@ -23,7 +23,6 @@ public record Article(
         String visibility,
         Boolean sample,
         String section,
-        Series series,
         Map<String, String> playground,
         Boolean featured,
         String modifiedAt,
@@ -32,8 +31,4 @@ public record Article(
         String environment,
         JsonNode project
 ) {
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Series(String id, String title, String enTitle, String description,
-                         String enDescription, int order, String cover) {
-    }
 }

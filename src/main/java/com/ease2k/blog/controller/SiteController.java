@@ -38,16 +38,13 @@ public class SiteController {
     @GetMapping(value = "/sitemap.xml", produces = "application/xml;charset=UTF-8")
     public String sitemap() {
         Map<String, String> paths = new LinkedHashMap<>();
-        for (String path : new String[]{"/", "/articles", "/daily", "/projects", "/series", "/competitions",
+        for (String path : new String[]{"/", "/articles", "/daily", "/projects", "/competitions",
                 "/about", "/subscribe", "/changelog"}) {
             paths.put(path, null);
         }
         for (Article article : articles.articlesForFeed()) {
             String updated = article.modifiedAt() == null ? article.date() : article.modifiedAt();
             paths.put("/entry/" + article.id(), ArticleDates.parse(updated).toString());
-            if (article.series() != null) {
-                paths.put("/series/" + article.series().id(), null);
-            }
         }
 
         StringBuilder xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");

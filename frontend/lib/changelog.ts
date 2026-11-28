@@ -5,6 +5,22 @@ export { changelogPath, changelogCopy } from "./changelog-meta";
 
 export const releases: Release[] = [
     {
+        date: "2026-11-27",
+        title: { zh: "更新个人介绍", en: "Updated the personal bio" },
+        changes: [
+            { zh: "更新「关于我」的中英文自我介绍。", en: "Updated the Chinese and English bios on the About page." },
+        ],
+    },
+    {
+        date: "2026-11-27",
+        title: { zh: "首页与文章页改版", en: "Redesigned homepage and article pages" },
+        changes: [
+            { zh: "首页换上山峦封面。精选阅读改为项目记录，旁边列出常用的技术栈。", en: "The homepage has a new mountain cover. It features project notes alongside the tech stack." },
+            { zh: "文章标题、摘要和发布时间重新排版，竞赛入口移回顶部导航。", en: "Article titles, summaries, and publication dates have a new layout. Contests is back in the top navigation." },
+            { zh: "移除公开专栏页和专栏 RSS。原有文章仍可单独阅读，已有阅读进度可以继续恢复。", en: "Removed public series pages and series RSS feeds. Individual articles and saved reading positions are still available." },
+        ],
+    },
+    {
         date: "2026-11-25",
         title: { zh: "简化文章保存与页面初始化", en: "Simplified article saves and page initialization" },
         changes: [

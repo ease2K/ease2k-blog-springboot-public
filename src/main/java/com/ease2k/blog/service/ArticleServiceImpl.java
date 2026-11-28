@@ -45,12 +45,6 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
     @Override
-    public boolean hasSeries(String id) {
-        return repository.findAll().stream()
-                .anyMatch(article -> article.series() != null && article.series().id().equals(id));
-    }
-
-    @Override
     public boolean hasAward(String id) {
         return repository.hasAward(id);
     }
